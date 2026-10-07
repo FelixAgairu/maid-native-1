@@ -277,11 +277,10 @@ class FileTools private constructor(files: List<LinkedFile>, private val documen
         override suspend fun invoke(arguments: JSONObject): String {
             val (name, file) = target(arguments)
             // Some models send a nested array as a JSON string.
-            val edits = when (val raw = arguments.opt("edits")) {
-                is JSONArray -> raw
-                is String -> runCatching { JSONArray(raw) }.getOrNull()
-                else -> null
-            } ?: throw IllegalArgumentException("\"edits\" must be an array of {old_text, new_text}")
+            val raw = arguments.opt("edits")
+            val edits = raw as? JSONArray
+                ?: (raw as? String)?.let { runCatching { JSONArray(it) }.getOrNull() }
+                ?: throw IllegalArgumentException("\"edits\" must be an array of {old_text, new_text}")
             require(edits.length() in 1..MAX_EDITS) { "\"edits\" must hold 1 to $MAX_EDITS edits" }
             var text = load(name, file)
             for (i in 0 until edits.length()) {
