@@ -14,7 +14,6 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
@@ -41,8 +40,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.hatsyrei.maidnative.data.prefs.SettingsRepository
 import com.hatsyrei.maidnative.data.remote.EndpointScanner
-import com.hatsyrei.maidnative.ui.common.DialogOverIme
-import com.hatsyrei.maidnative.ui.common.liftAboveIme
+import com.hatsyrei.maidnative.ui.common.AppDialog
 
 /** Ports that OpenAI-compatible servers ship with, offered as one-tap fills. */
 private val COMMON_PORTS = listOf(8080, 9931, 1234, 11434, 8000)
@@ -102,11 +100,8 @@ internal fun ScanOptionsDialog(
     val portValid = parsedPort != null &&
         parsedPort in SettingsRepository.MIN_PORT..SettingsRepository.MAX_PORT
 
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.liftAboveIme(),
-        properties = DialogOverIme,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         title = { Text("Scan options") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

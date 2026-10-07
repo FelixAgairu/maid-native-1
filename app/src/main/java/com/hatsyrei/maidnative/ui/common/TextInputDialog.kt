@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -36,11 +35,8 @@ internal fun TextInputDialog(
 ) {
     val text = rememberTextFieldState(initial)
     val trimmed = text.text.toString().trim()
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.liftAboveIme(),
-        properties = DialogOverIme,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         title = { Text(title) },
         text = {
             Column {

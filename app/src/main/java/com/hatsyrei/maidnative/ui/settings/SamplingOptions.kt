@@ -17,11 +17,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hatsyrei.maidnative.domain.Sampling
 import com.hatsyrei.maidnative.domain.SamplingParam
+import com.hatsyrei.maidnative.ui.common.AppDialog
 import com.hatsyrei.maidnative.ui.icons.CloseIcon
 import com.hatsyrei.maidnative.ui.icons.RepeatIcon
 import com.hatsyrei.maidnative.ui.icons.TuneIcon
@@ -107,15 +105,11 @@ internal fun SamplingDialog(
 ) {
     var draft by remember { mutableStateOf(sampling) }
 
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         title = { Text(group.title) },
         text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 group.params.forEach { param ->
                     SamplingRow(param, draft[param]) { draft = draft.with(param, it) }
                 }

@@ -7,13 +7,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Checkbox
@@ -41,6 +38,7 @@ import com.hatsyrei.maidnative.domain.tools.RunJavaScript
 import com.hatsyrei.maidnative.domain.tools.ToolEffect
 import com.hatsyrei.maidnative.domain.tools.ToolSwitch
 import com.hatsyrei.maidnative.domain.tools.Tools
+import com.hatsyrei.maidnative.ui.common.AppDialog
 import com.hatsyrei.maidnative.ui.icons.CasinoIcon
 import com.hatsyrei.maidnative.ui.icons.CodeIcon
 import com.hatsyrei.maidnative.ui.icons.DescriptionIcon
@@ -80,15 +78,11 @@ internal fun ToolsDialog(
     // Names of tools this build no longer has are dropped on save.
     var draft by remember { mutableStateOf(enabled.filter { name -> Tools.switches.any { it.name == name } }.toSet()) }
 
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         title = { Text("Tools") },
         text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Tools.switches.forEach { tool ->
                     ToolRow(tool, checked = tool.name in draft) { on ->
                         draft = if (on) draft + tool.name else draft - tool.name

@@ -18,6 +18,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -74,7 +75,7 @@ private fun MaidNativeApp(viewModel: ChatViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     // Handed down unread, so only the streaming bubble observes each token.
     val streaming = viewModel.streaming.collectAsStateWithLifecycle()
-    var screen by remember { mutableStateOf(Screen.Chat) }
+    var screen by rememberSaveable { mutableStateOf(Screen.Chat) }
 
     // Remembered once: the point of the holders is that the screens below see a
     // stable instance rather than fresh method references every recomposition.

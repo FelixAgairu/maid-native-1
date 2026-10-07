@@ -33,6 +33,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.hatsyrei.maidnative.domain.Attachment
 import com.hatsyrei.maidnative.domain.tools.ToolCalls
 import com.hatsyrei.maidnative.domain.tools.ToolText
+import com.hatsyrei.maidnative.ui.common.AppDialog
 
 /** The (mutually exclusive) modal dialogs [ChatScreen] can show. */
 internal sealed interface ChatDialog {
@@ -162,9 +163,8 @@ internal fun ConfirmDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         title = { Text(title) },
         text = { Text(message) },
         confirmButton = {

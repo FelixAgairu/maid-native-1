@@ -22,7 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -47,8 +46,7 @@ import com.hatsyrei.maidnative.domain.tools.LinkedFile
 import com.hatsyrei.maidnative.domain.tools.ToolCall
 import com.hatsyrei.maidnative.domain.tools.ToolCalls
 import com.hatsyrei.maidnative.domain.tools.ToolText
-import com.hatsyrei.maidnative.ui.common.DialogOverIme
-import com.hatsyrei.maidnative.ui.common.liftAboveIme
+import com.hatsyrei.maidnative.ui.common.AppDialog
 import com.hatsyrei.maidnative.ui.icons.CloseIcon
 import com.hatsyrei.maidnative.ui.icons.DescriptionIcon
 import org.json.JSONObject
@@ -314,11 +312,8 @@ private fun ToolCallDialog(
     // The endpoint rejects a call whose arguments are not a JSON object.
     val argumentsValid = runCatching { JSONObject(argumentsText) }.isSuccess
     val mono = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.liftAboveIme(),
-        properties = DialogOverIme,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         title = { Text(call.name, fontFamily = FontFamily.Monospace) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

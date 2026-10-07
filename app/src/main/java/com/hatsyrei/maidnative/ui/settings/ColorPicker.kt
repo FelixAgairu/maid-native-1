@@ -20,7 +20,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -44,6 +43,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.hatsyrei.maidnative.ui.common.AppDialog
 
 /** Material 200-level tones: bright enough to stay legible on the AMOLED canvas. */
 private val AccentPresets = listOf(
@@ -157,9 +157,8 @@ private fun ColorPickerDialog(
     var value by remember { mutableFloatStateOf(start[2]) }
     val color = Color.hsv(hue, saturation, value)
 
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         title = { Text("Accent colour") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
