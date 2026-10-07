@@ -152,8 +152,8 @@ private fun ToolRow(tool: ToolSwitch, checked: Boolean, onToggle: (Boolean) -> U
 private fun EffectTag(effect: ToolEffect) {
     Surface(
         shape = RoundedCornerShape(4.dp),
-        color = MaterialTheme.colorScheme.tertiaryContainer,
-        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
     ) {
         Text(
             effect.label,
