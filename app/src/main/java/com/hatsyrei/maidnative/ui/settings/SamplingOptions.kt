@@ -1,20 +1,35 @@
 package com.hatsyrei.maidnative.ui.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -25,11 +40,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hatsyrei.maidnative.domain.Sampling
 import com.hatsyrei.maidnative.domain.SamplingParam
+import com.hatsyrei.maidnative.ui.icons.CloseIcon
 import com.hatsyrei.maidnative.ui.icons.RepeatIcon
 import com.hatsyrei.maidnative.ui.icons.TuneIcon
 
@@ -96,7 +114,7 @@ internal fun SamplingDialog(
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 group.params.forEach { param ->
                     SamplingRow(param, draft[param]) { draft = draft.with(param, it) }
@@ -120,14 +138,21 @@ private fun SamplingRow(
     onChange: (Float?) -> Unit,
 ) {
     val enabled = value != null
-    // Holds the position while the row is off, so flipping the switch back on
-    // resumes where the user left it rather than snapping to the fallback.
+    // Holds the position while the row is off, so turning it back on resumes
+    // where the user left it rather than snapping to the fallback.
     var parked by remember { mutableFloatStateOf(value ?: param.fallback) }
     val current = value ?: parked
 
-    Column(modifier = Modifier.padding(top = 4.dp)) {
+    Column {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp)
+                .toggleable(
+                    value = enabled,
+                    role = Role.Switch,
+                    onValueChange = { on -> onChange(if (on) parked else null) },
+                ),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -137,41 +162,84 @@ private fun SamplingRow(
                     param.summary,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-            Switch(
-                checked = enabled,
-                onCheckedChange = { on -> onChange(if (on) parked else null) },
-            )
+            ValuePill(text = if (enabled) param.format(current) else "Auto", active = enabled)
         }
 
-        Row(
-            // Clears the tall M3 slider thumb from the label above it.
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        AnimatedVisibility(
+            visible = enabled,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut(),
         ) {
-            Slider(
+            SlimSlider(
                 value = current,
                 onValueChange = {
                     parked = it
                     onChange(it)
                 },
                 valueRange = param.min..param.max,
-                enabled = enabled,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                text = if (enabled) param.format(current) else "(${param.format(param.fallback)})",
-                style = MaterialTheme.typography.labelLarge,
-                color = if (enabled) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                textAlign = TextAlign.End,
-                modifier = Modifier.width(52.dp),
             )
         }
     }
+}
+
+/** "Auto" in an outline while the endpoint decides; the user's value, filled, once overridden. */
+@Composable
+private fun ValuePill(text: String, active: Boolean) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        shape = CircleShape,
+        color = if (active) colors.primaryContainer else Color.Transparent,
+        contentColor = if (active) colors.onPrimaryContainer else colors.onSurfaceVariant,
+        border = if (active) null else BorderStroke(1.dp, colors.outlineVariant),
+    ) {
+        Row(
+            modifier = Modifier
+                .widthIn(min = 72.dp)
+                .padding(start = 12.dp, end = if (active) 8.dp else 12.dp, top = 6.dp, bottom = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text, style = MaterialTheme.typography.labelLarge)
+            if (active) {
+                Icon(CloseIcon, contentDescription = null, modifier = Modifier.size(16.dp))
+            }
+        }
+    }
+}
+
+/** A thin track and round thumb, in place of M3's tall bar thumb and gapped track. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SlimSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+) {
+    val colors = SliderDefaults.colors(inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest)
+    Slider(
+        value = value,
+        onValueChange = onValueChange,
+        valueRange = valueRange,
+        colors = colors,
+        thumb = {
+            Box(
+                Modifier
+                    .size(20.dp)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape),
+            )
+        },
+        track = { state ->
+            SliderDefaults.Track(
+                sliderState = state,
+                colors = colors,
+                thumbTrackGapSize = 0.dp,
+                drawStopIndicator = null,
+                modifier = Modifier.height(4.dp),
+            )
+        },
+    )
 }

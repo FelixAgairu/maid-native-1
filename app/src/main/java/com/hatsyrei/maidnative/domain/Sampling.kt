@@ -20,6 +20,7 @@ enum class SamplingParam(
     val integral: Boolean = false,
     /** Outside the OpenAI spec: a strict endpoint rejects the whole request over it. */
     val extension: Boolean = false,
+    /** Kept short enough to fit one line beside the value pill. */
     val summary: String,
 ) {
     TEMPERATURE(
@@ -28,7 +29,7 @@ enum class SamplingParam(
         min = 0f,
         max = 2f,
         fallback = 0.8f,
-        summary = "Flattens or sharpens the odds. 0 always takes the likeliest token.",
+        summary = "Higher is more random.",
     ),
     TOP_P(
         wire = "top_p",
@@ -36,7 +37,7 @@ enum class SamplingParam(
         min = 0f,
         max = 1f,
         fallback = 0.95f,
-        summary = "Keeps the likeliest tokens up to this cumulative probability. 1 disables it.",
+        summary = "Cumulative probability cutoff.",
     ),
     TOP_K(
         wire = "top_k",
@@ -46,7 +47,7 @@ enum class SamplingParam(
         fallback = 40f,
         integral = true,
         extension = true,
-        summary = "Keeps only the K likeliest tokens. 0 disables it.",
+        summary = "Sample from the top K tokens.",
     ),
     MIN_P(
         wire = "min_p",
@@ -55,7 +56,7 @@ enum class SamplingParam(
         max = 1f,
         fallback = 0.05f,
         extension = true,
-        summary = "Drops tokens below this fraction of the likeliest token's odds. 0 disables it.",
+        summary = "Cutoff relative to the top token.",
     ),
     FREQUENCY_PENALTY(
         wire = "frequency_penalty",
@@ -63,7 +64,7 @@ enum class SamplingParam(
         min = -2f,
         max = 2f,
         fallback = 0f,
-        summary = "Penalises a token by how often it has already appeared.",
+        summary = "Discourages frequent repeats.",
     ),
     PRESENCE_PENALTY(
         wire = "presence_penalty",
@@ -71,7 +72,7 @@ enum class SamplingParam(
         min = -2f,
         max = 2f,
         fallback = 0f,
-        summary = "Penalises any token that has appeared at all, pushing toward new topics.",
+        summary = "Nudges toward new topics.",
     ),
     ;
 
