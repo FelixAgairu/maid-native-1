@@ -16,10 +16,10 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -112,7 +112,7 @@ private fun ToolRow(tool: ToolSwitch, checked: Boolean, onToggle: (Boolean) -> U
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
-            .toggleable(value = checked, role = Role.Switch, onValueChange = onToggle),
+            .toggleable(value = checked, role = Role.Checkbox, onValueChange = onToggle),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -143,8 +143,8 @@ private fun ToolRow(tool: ToolSwitch, checked: Boolean, onToggle: (Boolean) -> U
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        // The row handles the toggle, so the switch only shows state.
-        Switch(checked = checked, onCheckedChange = null)
+        // The row handles the toggle, so the checkbox only shows state.
+        Checkbox(checked = checked, onCheckedChange = null)
     }
 }
 
