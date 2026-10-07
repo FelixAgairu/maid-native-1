@@ -8,7 +8,7 @@ import kotlin.random.Random
 object RollDice : Tool {
     override val name = "roll_dice"
     override val label = "Dice roller"
-    override val summary = "Roll dice, like 2d6 or 1d20+5."
+    override val summary = "Rolls like 2d6 or 1d20+5."
     override val description =
         "Roll dice with a fair random number generator. Always use this for dice rolls instead of " +
             "inventing a result. Example: a D&D check of 1d20+5 is count 1, sides 20, modifier 5."

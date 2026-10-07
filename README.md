@@ -74,7 +74,7 @@ server.
   math and data work). Calls show inline as collapsible rows, and **Modify**
   can edit or remove a call's arguments and result. Needs a model and endpoint
   with tool-call support.
-- **Linked files** — with **File operations** on, the `+` menu can link an
+- **Linked files** — with **Files** on in the Tools dialog, the `+` menu can link an
   existing text file or create a new one (any extension) to send with a
   message. The model can then read it by line, search it, append to it or make
   targeted edits in place for the rest of the thread — handy for document work

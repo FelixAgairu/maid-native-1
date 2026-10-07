@@ -10,7 +10,7 @@ import kotlin.math.abs
 object GetDatetime : Tool {
     override val name = "get_datetime"
     override val label = "Date & time"
-    override val summary = "Current date, time and time zone."
+    override val summary = "Current date and time."
     override val description =
         "Get the current local date, time, weekday and time zone of the user's device."
 

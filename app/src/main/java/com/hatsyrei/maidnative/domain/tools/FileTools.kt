@@ -306,8 +306,9 @@ class FileTools private constructor(files: List<LinkedFile>, private val documen
 
     companion object : ToolSwitch {
         override val name = "file_operations"
-        override val label = "File operations"
-        override val summary = "Read and edit selected files."
+        override val label = "Files"
+        override val summary = "Link files to a chat."
+        override val effects = setOf(ToolEffect.WRITES)
 
         internal const val MAX_BYTES = 1024 * 1024
         internal const val MAX_CHARS = 50_000

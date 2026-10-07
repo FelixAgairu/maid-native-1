@@ -163,6 +163,14 @@ interface ToolSwitch {
 
     /** Shown in Settings; a tool's description is what the model reads. */
     val summary: String
+
+    /** Tagged in Settings so tools that reach past the chat stand out. */
+    val effects: Set<ToolEffect> get() = emptySet()
+}
+
+enum class ToolEffect(val label: String) {
+    NETWORK("Network"),
+    WRITES("Write access"),
 }
 
 /** A function the model may call, executed on the device. */
