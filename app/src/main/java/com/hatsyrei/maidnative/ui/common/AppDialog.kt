@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,7 +26,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
@@ -54,6 +54,8 @@ internal fun AppDialog(
     title: @Composable () -> Unit,
     confirmButton: @Composable () -> Unit,
     dismissButton: (@Composable () -> Unit)? = null,
+    /** A secondary action such as Delete, kept apart at the start of the button row. */
+    neutralButton: (@Composable () -> Unit)? = null,
     text: @Composable () -> Unit,
 ) {
     Dialog(
@@ -102,9 +104,11 @@ internal fun AppDialog(
                         }
                     }
                     Row(
-                        modifier = Modifier.align(Alignment.End),
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
+                        neutralButton?.invoke()
+                        Spacer(Modifier.weight(1f))
                         dismissButton?.invoke()
                         confirmButton()
                     }

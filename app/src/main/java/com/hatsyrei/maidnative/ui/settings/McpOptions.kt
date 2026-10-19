@@ -441,10 +441,12 @@ private fun McpServerDialog(
                 Text("Save")
             }
         },
+        neutralButton = if (isNew) {
+            null
+        } else {
+            { TextButton(onClick = onDelete) { Text("Delete", color = colors.error) } }
+        },
         dismissButton = {
-            if (!isNew) {
-                TextButton(onClick = onDelete) { Text("Delete", color = colors.error) }
-            }
             TextButton(onClick = onDismiss) { Text("Cancel") }
         },
     )
