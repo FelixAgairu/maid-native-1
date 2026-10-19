@@ -181,6 +181,7 @@ internal fun MessageItem(
     onOpenAttachment: (Attachment) -> Unit,
     onOpenFile: (LinkedFile) -> Unit,
     onUnlinkFile: (LinkedFile) -> Unit,
+    onApproveTools: (ids: List<String>, allow: Boolean, always: Boolean) -> Unit,
     streamingState: StreamingMarkdownState? = null,
     streaming: State<StreamingText?>? = null,
 ) {
@@ -374,6 +375,8 @@ internal fun MessageItem(
                 )
                 is ToolText.Segment.Calls -> ToolCallsBlock(
                     calls = segment.calls,
+                    awaiting = live?.awaiting.orEmpty(),
+                    onApprove = onApproveTools,
                     modifier = Modifier.padding(top = 10.dp),
                 )
             }

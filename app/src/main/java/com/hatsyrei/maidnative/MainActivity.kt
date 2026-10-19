@@ -107,6 +107,7 @@ private fun MaidNativeApp(viewModel: ChatViewModel) {
             exportConversation = viewModel::exportConversation,
             importConversations = viewModel::importConversations,
             backupAllChats = viewModel::backupAllChats,
+            approveTools = viewModel::approveTools,
         )
     }
     val settingsActions = remember(viewModel) {
@@ -118,7 +119,7 @@ private fun MaidNativeApp(viewModel: ChatViewModel) {
             refreshModels = viewModel::refreshModels,
             setReasoning = viewModel::setReasoning,
             setSampling = viewModel::setSampling,
-            setEnabledTools = viewModel::setEnabledTools,
+            setToolPolicies = viewModel::setToolPolicies,
             setMcpServers = viewModel::setMcpServers,
             listMcpTools = viewModel::listMcpTools,
             scan = viewModel::scanEndpoint,

@@ -173,6 +173,13 @@ enum class ToolEffect(val label: String) {
     WRITES("Write access"),
 }
 
+/** Whether the model is offered a tool, and whether each call waits for the user. */
+enum class ToolPolicy(val label: String) {
+    OFF("Off"),
+    ASK("Ask"),
+    ALLOW("Allow"),
+}
+
 /** A function the model may call, executed on the device. */
 interface Tool : ToolSwitch {
     val description: String
@@ -208,6 +215,9 @@ object Tools {
     }
 
     private fun error(message: String): String = JSONObject().put("error", message).toString()
+
+    /** What the model reads for a call the user turned down. */
+    val DECLINED: String = error("The user declined this call")
 }
 
 /** Models send numbers as `20`, `20.0` or `"20"`; all mean the same. */

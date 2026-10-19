@@ -65,6 +65,23 @@ class McpTest {
     }
 
     @Test
+    fun `tools ask unless trusted one by one or by server`() {
+        val weather = McpToolInfo(name = "get_weather")
+        val off = McpToolInfo(name = "off")
+        val server = server("Dice", dice, weather, off).copy(trustedTools = setOf("get_weather"), disabledTools = setOf("off"))
+        assertEquals(ToolPolicy.ASK, server.policy("roll_d20"))
+        assertEquals(ToolPolicy.ALLOW, server.policy("get_weather"))
+        assertEquals(ToolPolicy.OFF, server.policy("off"))
+        assertEquals(mapOf("dice__roll_d20" to ("Dice" to "roll_d20")), Mcp.asking(listOf(server)))
+
+        val trusted = server.copy(trusted = true)
+        assertEquals(ToolPolicy.ALLOW, trusted.policy("roll_d20"))
+        assertEquals(ToolPolicy.OFF, trusted.policy("off"))
+        assertTrue(Mcp.asking(listOf(trusted)).isEmpty())
+        assertTrue(Mcp.asking(listOf(server.copy(enabled = false))).isEmpty())
+    }
+
+    @Test
     fun `schema is an object without the schema keyword`() {
         val schema = Mcp.schema(dice.inputSchema)
         assertTrue(!schema.has("\$schema"))

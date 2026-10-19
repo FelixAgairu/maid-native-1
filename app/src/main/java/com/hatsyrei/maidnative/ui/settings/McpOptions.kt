@@ -2,6 +2,7 @@ package com.hatsyrei.maidnative.ui.settings
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -44,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import com.hatsyrei.maidnative.domain.tools.Mcp
 import com.hatsyrei.maidnative.domain.tools.McpServer
 import com.hatsyrei.maidnative.domain.tools.McpToolInfo
+import com.hatsyrei.maidnative.domain.tools.ToolPolicy
 import com.hatsyrei.maidnative.ui.chat.ConfirmDialog
 import com.hatsyrei.maidnative.ui.common.AppDialog
 import com.hatsyrei.maidnative.ui.icons.AddIcon
@@ -233,6 +237,8 @@ private fun McpServerDialog(
     val token = rememberTextFieldState(server.token)
     var tools by remember { mutableStateOf(server.tools) }
     var disabled by remember { mutableStateOf(server.disabledTools) }
+    var trusted by remember { mutableStateOf(server.trusted) }
+    var trustedTools by remember { mutableStateOf(server.trustedTools) }
     // The URL and token [tools] were listed with. Save waits for a listing of the current pair.
     var listedFor by remember { mutableStateOf(if (isNew) null else server.url to server.token) }
     var loading by remember { mutableStateOf(false) }
@@ -368,11 +374,43 @@ private fun McpServerDialog(
                         color = if (tools.isEmpty()) colors.onSurfaceVariant else colors.onSurface,
                         modifier = Modifier.padding(top = 8.dp),
                     )
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        if (tools.isNotEmpty()) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .heightIn(min = 56.dp)
+                                    .toggleable(value = trusted, role = Role.Switch) {
+                                        focusManager.clearFocus()
+                                        trusted = it
+                                    },
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Trust this server", style = MaterialTheme.typography.bodyLarge)
+                                    Text(
+                                        "Run tools without asking.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = colors.onSurfaceVariant,
+                                    )
+                                }
+                                Switch(checked = trusted, onCheckedChange = null)
+                            }
+                        }
                         tools.forEach { tool ->
-                            ToolRow(tool, checked = tool.name !in disabled) { on ->
+                            val policy = when {
+                                tool.name in disabled -> ToolPolicy.OFF
+                                trusted || tool.name in trustedTools -> ToolPolicy.ALLOW
+                                else -> ToolPolicy.ASK
+                            }
+                            ToolRow(tool, policy = policy, askEnabled = !trusted) { choice ->
                                 focusManager.clearFocus()
-                                disabled = if (on) disabled - tool.name else disabled + tool.name
+                                disabled = if (choice == ToolPolicy.OFF) disabled + tool.name else disabled - tool.name
+                                trustedTools = when {
+                                    choice == ToolPolicy.ASK -> trustedTools - tool.name
+                                    choice == ToolPolicy.ALLOW && !trusted -> trustedTools + tool.name
+                                    else -> trustedTools
+                                }
                             }
                         }
                     }
@@ -393,6 +431,8 @@ private fun McpServerDialog(
                             tools = tools,
                             // Names the server no longer lists would only pile up.
                             disabledTools = disabled.filterTo(HashSet()) { off -> tools.any { it.name == off } },
+                            trusted = trusted,
+                            trustedTools = trustedTools.filterTo(HashSet()) { on -> tools.any { it.name == on } },
                         ),
                     )
                 },

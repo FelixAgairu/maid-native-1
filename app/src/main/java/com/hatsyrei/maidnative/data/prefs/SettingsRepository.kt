@@ -18,6 +18,7 @@ import com.hatsyrei.maidnative.domain.ConversationDefaults
 import com.hatsyrei.maidnative.domain.Sampling
 import com.hatsyrei.maidnative.domain.tools.Mcp
 import com.hatsyrei.maidnative.domain.tools.McpServer
+import com.hatsyrei.maidnative.domain.tools.ToolPolicy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -68,6 +69,8 @@ class SettingsRepository(private val context: Context) {
          * without tool support may reject a request that lists any.
          */
         val enabledTools: Set<String> = emptySet(),
+        /** Of [enabledTools], those whose calls wait for the user's approval. */
+        val askTools: Set<String> = emptySet(),
         /**
          * Whether exports inline image and audio bytes. Off keeps the JSON
          * small, at the cost of those attachments not surviving the round trip.
@@ -131,6 +134,7 @@ class SettingsRepository(private val context: Context) {
             reasoning = prefs[KEY_REASONING] ?: true,
             sampling = Sampling.decode(prefs[KEY_SAMPLING]),
             enabledTools = prefs[KEY_ENABLED_TOOLS] ?: emptySet(),
+            askTools = prefs[KEY_ASK_TOOLS] ?: emptySet(),
             exportMedia = prefs[KEY_EXPORT_MEDIA] ?: true,
             accentColor = prefs[KEY_ACCENT] ?: 0,
             // A cleared field falls back to the default rather than a blank label.
@@ -244,9 +248,21 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
-    suspend fun setEnabledTools(names: Set<String>) {
+    /** Off tools are left out of both sets; written together so a request never sees half of a change. */
+    suspend fun setToolPolicies(policies: Map<String, ToolPolicy>) {
+        val enabled = policies.filterValues { it != ToolPolicy.OFF }.keys
+        val ask = policies.filterValues { it == ToolPolicy.ASK }.keys
         context.dataStore.edit {
-            if (names.isEmpty()) it.remove(KEY_ENABLED_TOOLS) else it[KEY_ENABLED_TOOLS] = names
+            if (enabled.isEmpty()) it.remove(KEY_ENABLED_TOOLS) else it[KEY_ENABLED_TOOLS] = enabled
+            if (ask.isEmpty()) it.remove(KEY_ASK_TOOLS) else it[KEY_ASK_TOOLS] = ask
+        }
+    }
+
+    /** "Don't ask again" from a call waiting for approval. */
+    suspend fun stopAsking(name: String) {
+        context.dataStore.edit { prefs ->
+            val ask = (prefs[KEY_ASK_TOOLS] ?: emptySet()) - name
+            if (ask.isEmpty()) prefs.remove(KEY_ASK_TOOLS) else prefs[KEY_ASK_TOOLS] = ask
         }
     }
 
@@ -419,6 +435,7 @@ class SettingsRepository(private val context: Context) {
                 val storedToken = entry.optString(FIELD_TOKEN)
                 val token = SecretCipher.decode(storedToken)
                 val disabled = entry.optJSONArray(FIELD_DISABLED_TOOLS) ?: JSONArray()
+                val trustedTools = entry.optJSONArray(FIELD_TRUSTED_TOOLS) ?: JSONArray()
                 McpServer(
                     id = id,
                     name = entry.optString(FIELD_NAME),
@@ -429,6 +446,8 @@ class SettingsRepository(private val context: Context) {
                     enabled = entry.optBoolean(FIELD_ENABLED, true),
                     tools = Mcp.decodeTools(entry.optJSONArray(FIELD_TOOLS)),
                     disabledTools = (0 until disabled.length()).mapTo(HashSet()) { disabled.optString(it) },
+                    trusted = entry.optBoolean(FIELD_TRUSTED),
+                    trustedTools = (0 until trustedTools.length()).mapTo(HashSet()) { trustedTools.optString(it) },
                 )
             }
         }.getOrDefault(emptyList())
@@ -444,7 +463,9 @@ class SettingsRepository(private val context: Context) {
                     .put(FIELD_TOKEN, server.storedToken.ifEmpty { SecretCipher.encode(server.token) })
                     .put(FIELD_ENABLED, server.enabled)
                     .put(FIELD_TOOLS, Mcp.encodeTools(server.tools))
-                    .put(FIELD_DISABLED_TOOLS, JSONArray(server.disabledTools.sorted())),
+                    .put(FIELD_DISABLED_TOOLS, JSONArray(server.disabledTools.sorted()))
+                    .put(FIELD_TRUSTED, server.trusted)
+                    .put(FIELD_TRUSTED_TOOLS, JSONArray(server.trustedTools.sorted())),
             )
         }
     }.toString()
@@ -488,6 +509,7 @@ class SettingsRepository(private val context: Context) {
         private val KEY_REASONING = booleanPreferencesKey("reasoning-enabled")
         private val KEY_SAMPLING = stringPreferencesKey("sampling")
         private val KEY_ENABLED_TOOLS = stringSetPreferencesKey("enabled-tools")
+        private val KEY_ASK_TOOLS = stringSetPreferencesKey("ask-tools")
         private val KEY_EXPORT_MEDIA = booleanPreferencesKey("export-media")
         private val KEY_ACCENT = intPreferencesKey("accent-color")
         private val KEY_USER_NAME = stringPreferencesKey("user-name")
@@ -511,5 +533,7 @@ class SettingsRepository(private val context: Context) {
         private const val FIELD_ENABLED = "enabled"
         private const val FIELD_TOOLS = "tools"
         private const val FIELD_DISABLED_TOOLS = "disabledTools"
+        private const val FIELD_TRUSTED = "trusted"
+        private const val FIELD_TRUSTED_TOOLS = "trustedTools"
     }
 }

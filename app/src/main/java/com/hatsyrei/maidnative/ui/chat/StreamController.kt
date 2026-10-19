@@ -10,6 +10,7 @@ import com.hatsyrei.maidnative.domain.tools.ToolCalls
 import com.hatsyrei.maidnative.domain.tools.ToolText
 import com.hatsyrei.maidnative.domain.tools.Tools
 import com.hatsyrei.maidnative.domain.tree.MessageNode
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -25,7 +26,13 @@ import kotlinx.coroutines.withContext
  * One publish tick. A null field did not change since the last tick, so the
  * caller keeps the value it already holds rather than taking an identical copy.
  */
-internal class StreamUpdate(val content: String?, val reasoning: String?, val calls: ToolCalls?)
+internal class StreamUpdate(
+    val content: String?,
+    val reasoning: String?,
+    val calls: ToolCalls?,
+    /** Ids of the calls waiting for the user's approval. */
+    val awaiting: Set<String>?,
+)
 
 /**
  * Runs one reply: streams a completion, runs any tools it calls and streams
@@ -58,6 +65,14 @@ internal class StreamController(
     private var callsVersion = 0
     private var publishedCallsVersion = 0
     private var rounds = 0
+
+    // Names whose calls wait for the user, and this round's decisions by call id.
+    // A gate stays after it is decided, so the loop still finds a denial made out of turn.
+    private val ask = HashSet<String>()
+    private val gates = HashMap<String, CompletableDeferred<Boolean>>()
+    private var gatesVersion = 0
+    private var publishedGatesVersion = 0
+    private var signal: Channel<Unit>? = null
 
     // Where the request in flight started writing into [content].
     private var roundStart = 0
@@ -93,12 +108,14 @@ internal class StreamController(
         config: OpenAiClient.Config,
         conversation: List<MessageNode>,
         tools: List<Tool>,
+        ask: Set<String>,
         onUpdate: (StreamUpdate) -> Unit,
         onError: (Throwable) -> Unit,
         onFinish: () -> Unit,
     ) {
         reset()
         val gen = synchronized(lock) {
+            this.ask.addAll(ask)
             // The thread as the endpoint is about to read it, which is what the
             // prompt count it returns will describe.
             promptChars = conversation.sumOf { it.content.length }
@@ -111,6 +128,7 @@ internal class StreamController(
             // the request was open, which on a stalled stream is pure drain. An
             // idle TCP socket, by contrast, costs essentially nothing.
             val pending = Channel<Unit>(Channel.CONFLATED)
+            signal = pending
 
             val pump = launch {
                 pending.consumeEach {
@@ -160,16 +178,22 @@ internal class StreamController(
                 val requested = beginRound(gen)
                 if (requested.isEmpty() || offered.isEmpty()) break
                 pending.trySend(Unit)
-                val results = withContext(Dispatchers.IO) {
-                    requested.map { (key, call) -> key to call.copy(result = Tools.run(call, offered)) }
-                }
-                synchronized(lock) {
-                    if (gen == generation) {
-                        calls.putAll(results)
-                        callsVersion++
+                // One at a time, in order; the cards wait together, so they can be decided in any order.
+                for ((key, call) in requested) {
+                    val allowed = synchronized(lock) { gates[call.id] }?.await() ?: true
+                    val result = if (allowed) {
+                        withContext(Dispatchers.IO) { Tools.run(call, offered) }
+                    } else {
+                        Tools.DECLINED
                     }
+                    synchronized(lock) {
+                        if (gen == generation) {
+                            calls[key] = call.copy(result = result)
+                            callsVersion++
+                        }
+                    }
+                    pending.trySend(Unit)
                 }
-                pending.trySend(Unit)
             }
 
             pump.cancel()
@@ -199,12 +223,31 @@ internal class StreamController(
         if (requested.isEmpty()) return emptyList()
         rounds++
         callsVersion++
+        gates.clear()
+        for ((_, call) in requested) if (call.name in ask) gates[call.id] = CompletableDeferred()
+        gatesVersion++
         while (content.isNotEmpty() && content.last().isWhitespace()) content.setLength(content.length - 1)
         if (content.isNotEmpty()) content.append("\n\n")
         requested.joinTo(content, "\n") { (key, _) -> ToolText.marker(key) }
         content.append("\n\n")
         reasoningBreak = reasoning.isNotEmpty()
         requested
+    }
+
+    /** Lets a waiting call run, or turns it down; a call already decided keeps its decision. */
+    fun resolve(id: String, allow: Boolean) {
+        synchronized(lock) {
+            if (gates[id]?.complete(allow) != true) return
+            gatesVersion++
+        }
+        signal?.trySend(Unit)
+    }
+
+    /** Later calls to [names] in this reply run without asking. */
+    fun stopAsking(names: Set<String>) = synchronized(lock) { ask.removeAll(names) }
+
+    fun awaitingCalls(): List<ToolCall> = synchronized(lock) {
+        calls.values.filter { gates[it.id]?.isCompleted == false }
     }
 
     /**
@@ -231,6 +274,11 @@ internal class StreamController(
         callsVersion = 0
         publishedCallsVersion = 0
         rounds = 0
+        ask.clear()
+        gates.clear()
+        gatesVersion = 0
+        publishedGatesVersion = 0
+        signal = null
         roundStart = 0
         deltas.clear()
         reasoningBreak = false
@@ -291,14 +339,17 @@ internal class StreamController(
         val contentChanged = content.length != publishedContent
         val reasoningChanged = reasoning.length != publishedReasoning
         val callsChanged = callsVersion != publishedCallsVersion
-        if (!contentChanged && !reasoningChanged && !callsChanged) return null
+        val gatesChanged = gatesVersion != publishedGatesVersion
+        if (!contentChanged && !reasoningChanged && !callsChanged && !gatesChanged) return null
         publishedContent = content.length
         publishedReasoning = reasoning.length
         publishedCallsVersion = callsVersion
+        publishedGatesVersion = gatesVersion
         return StreamUpdate(
             content = if (contentChanged) content.toString() else null,
             reasoning = if (reasoningChanged) reasoning.toString() else null,
             calls = if (callsChanged) calls.toMap() else null,
+            awaiting = if (gatesChanged) gates.filterValues { !it.isCompleted }.keys.toSet() else null,
         )
     }
 

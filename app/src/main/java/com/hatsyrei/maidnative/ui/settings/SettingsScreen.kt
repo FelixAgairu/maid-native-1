@@ -370,10 +370,11 @@ fun SettingsScreen(
     if (showTools) {
         ToolsDialog(
             enabled = state.settings.enabledTools,
+            ask = state.settings.askTools,
             onDismiss = { showTools = false },
             onConfirm = {
                 showTools = false
-                actions.setEnabledTools(it)
+                actions.setToolPolicies(it)
             },
         )
     }

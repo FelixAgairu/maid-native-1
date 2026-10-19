@@ -32,6 +32,7 @@ import com.hatsyrei.maidnative.domain.tools.McpToolInfo
 import com.hatsyrei.maidnative.domain.tools.RunJavaScript
 import com.hatsyrei.maidnative.domain.tools.ToolCallStore
 import com.hatsyrei.maidnative.domain.tools.ToolCalls
+import com.hatsyrei.maidnative.domain.tools.ToolPolicy
 import com.hatsyrei.maidnative.domain.tools.ToolText
 import com.hatsyrei.maidnative.domain.tools.Tools
 import com.hatsyrei.maidnative.domain.tools.linkedFiles
@@ -125,6 +126,8 @@ data class StreamingText(
     val text: String = "",
     val reasoning: String = "",
     val calls: ToolCalls = emptyMap(),
+    /** Ids of the calls waiting for the user's approval. */
+    val awaiting: Set<String> = emptySet(),
 )
 
 class ChatViewModel(app: Application) : AndroidViewModel(app) {
@@ -168,6 +171,15 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val stream = StreamController(viewModelScope, client)
+
+    private sealed interface AskTarget {
+        data class Switch(val name: String) : AskTarget
+
+        data class Server(val server: String, val tool: String) : AskTarget
+    }
+
+    // For the reply in flight: tool name to what "Don't ask again" changes.
+    private var askTargets: Map<String, AskTarget> = emptyMap()
 
     // Guards the automatic model fetch so it runs at most once per app launch
     // (plus once per endpoint change). A failed fetch leaves the models list
@@ -347,7 +359,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     fun setModel(value: String) = viewModelScope.launch { settingsRepo.setModel(value) }
     fun setReasoning(enabled: Boolean) = viewModelScope.launch { settingsRepo.setReasoning(enabled) }
     fun setSampling(value: Sampling) = viewModelScope.launch { settingsRepo.setSampling(value) }
-    fun setEnabledTools(names: Set<String>) = viewModelScope.launch { settingsRepo.setEnabledTools(names) }
+    fun setToolPolicies(policies: Map<String, ToolPolicy>) =
+        viewModelScope.launch { settingsRepo.setToolPolicies(policies) }
 
     fun setMcpServers(servers: List<McpServer>) =
         viewModelScope.launch { guardCredentials { settingsRepo.setMcpServers(servers) } }
@@ -868,15 +881,24 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         _streaming.value = StreamingText(responseId)
         persist()
         val conversation = MessageTree.getConversation(_state.value.mappings, rootId)
+        val servers = mcpServers.value
+        val fileTools = if (FileTools.name in s.enabledTools) {
+            FileTools.of(LinkedFileStore.inThread(conversation), documents)
+        } else {
+            emptyList()
+        }
+        val builtIns = Tools.enabled(s.enabledTools)
+        // What "Don't ask again" changes for each tool that asks.
+        askTargets = buildMap {
+            builtIns.filter { it.name in s.askTools }.forEach { put(it.name, AskTarget.Switch(it.name)) }
+            if (FileTools.name in s.askTools) fileTools.forEach { put(it.name, AskTarget.Switch(FileTools.name)) }
+            Mcp.asking(servers).forEach { (name, owner) -> put(name, AskTarget.Server(owner.first, owner.second)) }
+        }
         stream.start(
             config = OpenAiClient.Config(s.baseURL, s.apiKey, s.model, s.reasoning, s.sampling),
             conversation = conversation,
-            tools = Tools.enabled(s.enabledTools) + Mcp.tools(mcpServers.value, mcp) +
-                if (FileTools.name in s.enabledTools) {
-                    FileTools.of(LinkedFileStore.inThread(conversation), documents)
-                } else {
-                    emptyList()
-                },
+            tools = builtIns + Mcp.tools(servers, mcp) + fileTools,
+            ask = askTargets.keys,
             onUpdate = { update ->
                 _streaming.update { live ->
                     // Guards against a tick from a superseded job.
@@ -887,6 +909,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                             text = update.content ?: live.text,
                             reasoning = update.reasoning ?: live.reasoning,
                             calls = update.calls ?: live.calls,
+                            awaiting = update.awaiting ?: live.awaiting,
                         )
                     }
                 }
@@ -894,6 +917,36 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
             onError = { e -> _state.update { it.copy(error = e.message) } },
             onFinish = ::finishStreaming,
         )
+    }
+
+    /**
+     * Decides calls waiting for approval. [always] also stops asking about
+     * their tools, here and in Settings, and lets their other waiting calls run.
+     */
+    fun approveTools(ids: List<String>, allow: Boolean, always: Boolean) {
+        val decided = ids.toMutableSet()
+        if (allow && always) {
+            val waiting = stream.awaitingCalls()
+            val names = waiting.filter { it.id in ids }.mapTo(HashSet()) { it.name }
+            waiting.filter { it.name in names }.mapTo(decided) { it.id }
+            stream.stopAsking(names)
+            val targets = names.mapNotNull { askTargets[it] }.toSet()
+            viewModelScope.launch {
+                for (target in targets) {
+                    when (target) {
+                        is AskTarget.Switch -> settingsRepo.stopAsking(target.name)
+                        is AskTarget.Server -> guardCredentials {
+                            settingsRepo.setMcpServers(
+                                mcpServers.value.map {
+                                    if (it.id == target.server) it.copy(trustedTools = it.trustedTools + target.tool) else it
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        decided.forEach { stream.resolve(it, allow) }
     }
 
     fun stop() {

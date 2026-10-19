@@ -7,6 +7,7 @@ import com.hatsyrei.maidnative.data.store.AvatarStore
 import com.hatsyrei.maidnative.domain.Sampling
 import com.hatsyrei.maidnative.domain.tools.McpServer
 import com.hatsyrei.maidnative.domain.tools.McpToolInfo
+import com.hatsyrei.maidnative.domain.tools.ToolPolicy
 
 /**
  * Everything the settings screen can ask the view model to do. Grouped for the
@@ -22,7 +23,7 @@ class SettingsActions(
     val refreshModels: () -> Unit,
     val setReasoning: (Boolean) -> Unit,
     val setSampling: (Sampling) -> Unit,
-    val setEnabledTools: (Set<String>) -> Unit,
+    val setToolPolicies: (Map<String, ToolPolicy>) -> Unit,
     val setMcpServers: (List<McpServer>) -> Unit,
     val listMcpTools: suspend (url: String, token: String) -> List<McpToolInfo>,
     val scan: (port: Int, prefixLength: Int) -> Unit,

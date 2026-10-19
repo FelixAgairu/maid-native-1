@@ -454,6 +454,7 @@ private fun ChatScaffold(
                             onOpenAttachment = onOpenAttachment,
                             onOpenFile = onOpenFile,
                             onUnlinkFile = { actions.unlinkFile(node.root, it) },
+                            onApproveTools = actions.approveTools,
                             onPrevBranch = { node.parent?.let(actions.prevBranch) },
                             onNextBranch = { node.parent?.let(actions.nextBranch) },
                             streamingState = streamingMarkdown.takeIf { node.id == streamingId },

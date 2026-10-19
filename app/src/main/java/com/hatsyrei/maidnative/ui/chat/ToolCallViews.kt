@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -51,11 +54,60 @@ import com.hatsyrei.maidnative.ui.icons.CloseIcon
 import com.hatsyrei.maidnative.ui.icons.DescriptionIcon
 import org.json.JSONObject
 
-/** Calls the model made together, each collapsed to its name. */
+/** Calls the model made together, each collapsed to its name; one waiting for approval opens with its choices. */
 @Composable
-internal fun ToolCallsBlock(calls: List<ToolCall>, modifier: Modifier = Modifier) {
+internal fun ToolCallsBlock(
+    calls: List<ToolCall>,
+    modifier: Modifier = Modifier,
+    awaiting: Set<String> = emptySet(),
+    onApprove: (ids: List<String>, allow: Boolean, always: Boolean) -> Unit = { _, _, _ -> },
+) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        for (call in calls) ToolCallRow(call)
+        for (call in calls) {
+            if (call.id in awaiting) ApprovalRow(call, onApprove) else ToolCallRow(call)
+        }
+        val waiting = calls.filter { it.id in awaiting }
+        if (waiting.size > 1) {
+            TextButton(
+                onClick = { onApprove(waiting.map { it.id }, true, false) },
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                Text("Allow all (${waiting.size})")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ApprovalRow(call: ToolCall, onApprove: (ids: List<String>, allow: Boolean, always: Boolean) -> Unit) {
+    var always by remember(call.id) { mutableStateOf(false) }
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = colors.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 6.dp)) {
+            ToolHeader(call)
+            if (call.arguments.isNotBlank() && call.arguments != "{}") {
+                ToolDetail(label = "Arguments", text = prettyJson(call.arguments))
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .weight(1f)
+                        .toggleable(value = always, role = Role.Checkbox, onValueChange = { always = it }),
+                ) {
+                    Checkbox(checked = always, onCheckedChange = null, modifier = Modifier.padding(end = 8.dp))
+                    Text("Don't ask again", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+                }
+                TextButton(onClick = { onApprove(listOf(call.id), false, false) }) {
+                    Text("Deny", color = colors.error)
+                }
+                TextButton(onClick = { onApprove(listOf(call.id), true, always) }) { Text("Allow") }
+            }
+        }
     }
 }
 
@@ -71,23 +123,7 @@ private fun ToolCallRow(call: ToolCall) {
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Icon(
-                    Icons.Filled.Build,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp),
-                )
-                Text(
-                    text = call.name,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
-                )
+            ToolHeader(call) {
                 if (running) {
                     Text(
                         text = "Running…",
@@ -114,12 +150,40 @@ private fun ToolCallRow(call: ToolCall) {
 }
 
 @Composable
+private fun ToolHeader(call: ToolCall, trailing: @Composable () -> Unit = {}) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            Icons.Filled.Build,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(16.dp),
+        )
+        Text(
+            text = call.name,
+            style = MaterialTheme.typography.labelLarge,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            // Keeps both ends of `server__tool` in view.
+            overflow = TextOverflow.MiddleEllipsis,
+            modifier = Modifier.weight(1f),
+        )
+        trailing()
+    }
+}
+
+private fun prettyJson(raw: String): String = runCatching { JSONObject(raw).toString(2) }.getOrDefault(raw)
+
+@Composable
 private fun ToolDetail(label: String, text: String) {
     Text(
         text = label,
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 6.dp),
+        modifier = Modifier.padding(top = 10.dp),
     )
     Text(
         text = text,

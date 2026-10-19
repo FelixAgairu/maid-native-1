@@ -23,8 +23,18 @@ data class McpServer(
     val tools: List<McpToolInfo> = emptyList(),
     /** Server-side names of the tools switched off, so a tool the server adds later starts on. */
     val disabledTools: Set<String> = emptySet(),
+    /** Every tool runs without asking, including ones the server adds later. */
+    val trusted: Boolean = false,
+    /** Server-side names of the tools set to run without asking; the rest ask. */
+    val trustedTools: Set<String> = emptySet(),
 ) {
     val prefix: String get() = Mcp.prefix(name)
+
+    fun policy(tool: String): ToolPolicy = when {
+        tool in disabledTools -> ToolPolicy.OFF
+        trusted || tool in trustedTools -> ToolPolicy.ALLOW
+        else -> ToolPolicy.ASK
+    }
 }
 
 /** One tool a server listed, with the annotations the Tools dialog tags. */
@@ -89,13 +99,21 @@ object Mcp {
     }
 
     /** The tools [servers] offer: enabled servers, less the tools switched off. */
-    fun tools(servers: List<McpServer>, caller: McpCaller): List<Tool> = servers
+    fun tools(servers: List<McpServer>, caller: McpCaller): List<Tool> = offered(servers)
+        .map { (server, info) -> McpTool(server, info, caller) }
+        .distinctBy { it.name }
+
+    /** The offered tools that wait for the user, by the name the model calls them: server id to server-side name. */
+    fun asking(servers: List<McpServer>): Map<String, Pair<String, String>> = offered(servers)
+        .filter { (server, info) -> server.policy(info.name) == ToolPolicy.ASK }
+        .associate { (server, info) -> toolName(server.prefix, info.name) to (server.id to info.name) }
+
+    private fun offered(servers: List<McpServer>): List<Pair<McpServer, McpToolInfo>> = servers
         // A token that can't be decrypted would turn into unauthenticated requests.
         .filter { it.enabled && it.tokenReadable }
         .flatMap { server ->
-            server.tools.filter { it.name !in server.disabledTools }.map { McpTool(server, it, caller) }
+            server.tools.filter { it.name !in server.disabledTools }.map { server to it }
         }
-        .distinctBy { it.name }
 
     /** [raw] as an object schema, which is what every endpoint expects of a function's parameters. */
     fun schema(raw: String): JSONObject {

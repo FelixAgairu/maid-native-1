@@ -42,4 +42,6 @@ class ChatActions(
     val exportConversation: (String, Uri) -> Unit,
     val importConversations: (List<Uri>) -> Unit,
     val backupAllChats: (Uri) -> Unit,
+    /** Decides tool calls waiting for approval; [always] stops asking about their tools. */
+    val approveTools: (ids: List<String>, allow: Boolean, always: Boolean) -> Unit,
 )
