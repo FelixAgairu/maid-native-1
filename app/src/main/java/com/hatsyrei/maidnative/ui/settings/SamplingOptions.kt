@@ -60,7 +60,7 @@ internal enum class SamplingGroup(
         listOf(SamplingParam.TEMPERATURE, SamplingParam.TOP_P, SamplingParam.TOP_K, SamplingParam.MIN_P),
     ),
     PENALTIES(
-        "Penalties",
+        "Penalty",
         RepeatIcon,
         listOf(SamplingParam.FREQUENCY_PENALTY, SamplingParam.PRESENCE_PENALTY),
     ),
