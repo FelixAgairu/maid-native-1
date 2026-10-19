@@ -5,6 +5,8 @@ import androidx.compose.runtime.Stable
 import com.hatsyrei.maidnative.data.prefs.SettingsRepository.EndpointPreset
 import com.hatsyrei.maidnative.data.store.AvatarStore
 import com.hatsyrei.maidnative.domain.Sampling
+import com.hatsyrei.maidnative.domain.tools.McpServer
+import com.hatsyrei.maidnative.domain.tools.McpToolInfo
 
 /**
  * Everything the settings screen can ask the view model to do. Grouped for the
@@ -21,6 +23,8 @@ class SettingsActions(
     val setReasoning: (Boolean) -> Unit,
     val setSampling: (Sampling) -> Unit,
     val setEnabledTools: (Set<String>) -> Unit,
+    val setMcpServers: (List<McpServer>) -> Unit,
+    val listMcpTools: suspend (url: String, token: String) -> List<McpToolInfo>,
     val scan: (port: Int, prefixLength: Int) -> Unit,
     val resetScan: () -> Unit,
     val savePreset: (name: String, baseURL: String, apiKey: String) -> Unit,

@@ -11,6 +11,7 @@ import com.hatsyrei.maidnative.data.prefs.SecretUnavailableException
 import com.hatsyrei.maidnative.data.prefs.SettingsRepository
 import com.hatsyrei.maidnative.data.remote.EndpointScanner
 import com.hatsyrei.maidnative.data.remote.Endpoints
+import com.hatsyrei.maidnative.data.remote.McpClient
 import com.hatsyrei.maidnative.data.remote.OpenAiClient
 import com.hatsyrei.maidnative.data.store.AttachmentStore
 import com.hatsyrei.maidnative.data.store.AvatarStore
@@ -25,6 +26,9 @@ import com.hatsyrei.maidnative.domain.Sampling
 import com.hatsyrei.maidnative.domain.tools.FileTools
 import com.hatsyrei.maidnative.domain.tools.LinkedFile
 import com.hatsyrei.maidnative.domain.tools.LinkedFileStore
+import com.hatsyrei.maidnative.domain.tools.Mcp
+import com.hatsyrei.maidnative.domain.tools.McpServer
+import com.hatsyrei.maidnative.domain.tools.McpToolInfo
 import com.hatsyrei.maidnative.domain.tools.RunJavaScript
 import com.hatsyrei.maidnative.domain.tools.ToolCallStore
 import com.hatsyrei.maidnative.domain.tools.ToolCalls
@@ -127,6 +131,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
 
     private val settingsRepo = SettingsRepository(app)
     private val client = OpenAiClient()
+    private val mcp = McpClient()
     private val repo = MessageRepository(MaidDatabase.get(app).messageDao())
     private val fileStore = ConversationFileStore(app.contentResolver)
     private val nameplateStore = NameplateStore(app)
@@ -156,6 +161,10 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     /** Saved endpoints, kept out of [state] since only Settings reads them. */
     val presets: StateFlow<List<SettingsRepository.EndpointPreset>> = settingsRepo.presets
         .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Kept out of [state] for the same reason as [presets]; a reply reads it when it starts. */
+    val mcpServers: StateFlow<List<McpServer>> = settingsRepo.mcpServers
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val stream = StreamController(viewModelScope, client)
@@ -339,6 +348,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     fun setReasoning(enabled: Boolean) = viewModelScope.launch { settingsRepo.setReasoning(enabled) }
     fun setSampling(value: Sampling) = viewModelScope.launch { settingsRepo.setSampling(value) }
     fun setEnabledTools(names: Set<String>) = viewModelScope.launch { settingsRepo.setEnabledTools(names) }
+
+    fun setMcpServers(servers: List<McpServer>) =
+        viewModelScope.launch { guardCredentials { settingsRepo.setMcpServers(servers) } }
+
+    /** For the server dialog, which shows what failed; throws rather than reporting through [state]. */
+    suspend fun listMcpTools(url: String, token: String): List<McpToolInfo> = mcp.listTools(url, token)
 
     fun setExportMedia(enabled: Boolean) = viewModelScope.launch { settingsRepo.setExportMedia(enabled) }
     fun setAccentColor(argb: Int) = viewModelScope.launch { settingsRepo.setAccentColor(argb) }
@@ -856,11 +871,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         stream.start(
             config = OpenAiClient.Config(s.baseURL, s.apiKey, s.model, s.reasoning, s.sampling),
             conversation = conversation,
-            tools = Tools.enabled(s.enabledTools) + if (FileTools.name in s.enabledTools) {
-                FileTools.of(LinkedFileStore.inThread(conversation), documents)
-            } else {
-                emptyList()
-            },
+            tools = Tools.enabled(s.enabledTools) + Mcp.tools(mcpServers.value, mcp) +
+                if (FileTools.name in s.enabledTools) {
+                    FileTools.of(LinkedFileStore.inThread(conversation), documents)
+                } else {
+                    emptyList()
+                },
             onUpdate = { update ->
                 _streaming.update { live ->
                     // Guards against a tick from a superseded job.

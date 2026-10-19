@@ -81,6 +81,12 @@ server.
   or a running notes file. Uses the system file picker, so the app needs no
   storage permission and only ever sees the files you pick. Linked files show
   on their message and in **Properties**; tap one to view it, or unlink it.
+- **MCP servers** — the **MCP** chip beside Tools adds remote [Model Context
+  Protocol](https://modelcontextprotocol.io) servers over Streamable HTTP, with
+  an optional bearer token (stored encrypted). Connecting lists the server's
+  tools, each of which can be switched off; the model sees them as
+  `server__tool`. A server on the phone itself (e.g. in Termux) is reached at
+  `http://127.0.0.1`.
 - **Endpoint presets and a model-picker pill** for switching servers and models
   in a couple of taps.
 - **Personalisation** — AMOLED-true-black theme with a custom accent colour,

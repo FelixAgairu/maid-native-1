@@ -100,7 +100,7 @@ internal fun ToolsDialog(
 }
 
 @Composable
-private fun ToolRow(tool: ToolSwitch, checked: Boolean, onToggle: (Boolean) -> Unit) {
+internal fun ToolRow(tool: ToolSwitch, checked: Boolean, onToggle: (Boolean) -> Unit) {
     val colors = MaterialTheme.colorScheme
     Row(
         modifier = Modifier

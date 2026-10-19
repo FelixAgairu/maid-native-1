@@ -16,6 +16,8 @@ import com.hatsyrei.maidnative.data.remote.Endpoints
 import com.hatsyrei.maidnative.data.store.AvatarStore
 import com.hatsyrei.maidnative.domain.ConversationDefaults
 import com.hatsyrei.maidnative.domain.Sampling
+import com.hatsyrei.maidnative.domain.tools.Mcp
+import com.hatsyrei.maidnative.domain.tools.McpServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -153,6 +155,13 @@ class SettingsRepository(private val context: Context) {
         .map { it[KEY_PRESETS] }
         .distinctUntilChanged()
         .map { decodePresets(it) }
+        .flowOn(Dispatchers.IO)
+
+    /** Narrowed to the stored value first, as [presets] is, so tokens are decrypted only on a real edit. */
+    val mcpServers: Flow<List<McpServer>> = context.dataStore.data
+        .map { it[KEY_MCP_SERVERS] }
+        .distinctUntilChanged()
+        .map { decodeMcpServers(it) }
         .flowOn(Dispatchers.IO)
 
     /**
@@ -389,6 +398,57 @@ class SettingsRepository(private val context: Context) {
         }.getOrDefault(emptyList())
     }
 
+    /**
+     * @throws SecretUnavailableException if a new token cannot be encrypted, in
+     * which case nothing is written.
+     */
+    suspend fun setMcpServers(servers: List<McpServer>): Unit = withContext(Dispatchers.IO) {
+        val encoded = encodeMcpServers(servers)
+        context.dataStore.edit {
+            if (servers.isEmpty()) it.remove(KEY_MCP_SERVERS) else it[KEY_MCP_SERVERS] = encoded
+        }
+    }
+
+    private fun decodeMcpServers(raw: String?): List<McpServer> {
+        if (raw.isNullOrEmpty()) return emptyList()
+        return runCatching {
+            val array = JSONArray(raw)
+            (0 until array.length()).mapNotNull { i ->
+                val entry = array.optJSONObject(i) ?: return@mapNotNull null
+                val id = entry.optString(FIELD_ID).ifEmpty { return@mapNotNull null }
+                val storedToken = entry.optString(FIELD_TOKEN)
+                val token = SecretCipher.decode(storedToken)
+                val disabled = entry.optJSONArray(FIELD_DISABLED_TOOLS) ?: JSONArray()
+                McpServer(
+                    id = id,
+                    name = entry.optString(FIELD_NAME),
+                    url = entry.optString(FIELD_URL),
+                    token = token.orEmpty(),
+                    storedToken = storedToken,
+                    tokenReadable = token != null,
+                    enabled = entry.optBoolean(FIELD_ENABLED, true),
+                    tools = Mcp.decodeTools(entry.optJSONArray(FIELD_TOOLS)),
+                    disabledTools = (0 until disabled.length()).mapTo(HashSet()) { disabled.optString(it) },
+                )
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    private fun encodeMcpServers(servers: List<McpServer>): String = JSONArray().apply {
+        for (server in servers) {
+            put(
+                JSONObject()
+                    .put(FIELD_ID, server.id)
+                    .put(FIELD_NAME, server.name)
+                    .put(FIELD_URL, server.url)
+                    .put(FIELD_TOKEN, server.storedToken.ifEmpty { SecretCipher.encode(server.token) })
+                    .put(FIELD_ENABLED, server.enabled)
+                    .put(FIELD_TOOLS, Mcp.encodeTools(server.tools))
+                    .put(FIELD_DISABLED_TOOLS, JSONArray(server.disabledTools.sorted())),
+            )
+        }
+    }.toString()
+
     private fun encodePresets(presets: List<EndpointPreset>): String {
         val array = JSONArray()
         presets.forEach {
@@ -440,10 +500,16 @@ class SettingsRepository(private val context: Context) {
         private val KEY_SCAN_PORT = intPreferencesKey("scan-port")
         private val KEY_SCAN_PREFIX = intPreferencesKey("scan-prefix-length")
         private val KEY_ACTIVE_CHAT = stringPreferencesKey("active-chat")
+        private val KEY_MCP_SERVERS = stringPreferencesKey("mcp-servers")
 
         private const val FIELD_ID = "id"
         private const val FIELD_NAME = "name"
         private const val FIELD_BASE_URL = "baseURL"
         private const val FIELD_API_KEY = "apiKey"
+        private const val FIELD_URL = "url"
+        private const val FIELD_TOKEN = "token"
+        private const val FIELD_ENABLED = "enabled"
+        private const val FIELD_TOOLS = "tools"
+        private const val FIELD_DISABLED_TOOLS = "disabledTools"
     }
 }

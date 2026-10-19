@@ -119,6 +119,8 @@ private fun MaidNativeApp(viewModel: ChatViewModel) {
             setReasoning = viewModel::setReasoning,
             setSampling = viewModel::setSampling,
             setEnabledTools = viewModel::setEnabledTools,
+            setMcpServers = viewModel::setMcpServers,
+            listMcpTools = viewModel::listMcpTools,
             scan = viewModel::scanEndpoint,
             resetScan = viewModel::resetScan,
             savePreset = viewModel::savePreset,
@@ -168,9 +170,11 @@ private fun MaidNativeApp(viewModel: ChatViewModel) {
                 Screen.Settings -> {
                     BackHandler { screen = Screen.Chat }
                     val presets by viewModel.presets.collectAsStateWithLifecycle()
+                    val mcpServers by viewModel.mcpServers.collectAsStateWithLifecycle()
                     SettingsScreen(
                         state = state,
                         presets = presets,
+                        mcpServers = mcpServers,
                         actions = settingsActions,
                         onBack = { screen = Screen.Chat },
                     )

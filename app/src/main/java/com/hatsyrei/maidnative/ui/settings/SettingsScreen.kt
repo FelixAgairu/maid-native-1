@@ -59,6 +59,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.hatsyrei.maidnative.data.prefs.SettingsRepository.EndpointPreset
+import com.hatsyrei.maidnative.domain.tools.McpServer
 import com.hatsyrei.maidnative.ui.chat.ChatUiState
 import com.hatsyrei.maidnative.ui.chat.ConfirmDialog
 import com.hatsyrei.maidnative.ui.chat.ModelSelector
@@ -70,6 +71,7 @@ import kotlinx.coroutines.flow.collectLatest
 fun SettingsScreen(
     state: ChatUiState,
     presets: List<EndpointPreset>,
+    mcpServers: List<McpServer>,
     actions: SettingsActions,
     onBack: () -> Unit,
 ) {
@@ -79,6 +81,7 @@ fun SettingsScreen(
     var showScanOptions by remember { mutableStateOf(false) }
     var editingSampling by remember { mutableStateOf<SamplingGroup?>(null) }
     var showTools by remember { mutableStateOf(false) }
+    var showMcp by remember { mutableStateOf(false) }
     var naming by remember { mutableStateOf<EndpointPreset?>(null) }
     var savingNew by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<EndpointPreset?>(null) }
@@ -264,6 +267,14 @@ fun SettingsScreen(
                         showTools = true
                     },
                 )
+
+                McpChip(
+                    servers = mcpServers,
+                    onClick = {
+                        focusManager.clearFocus()
+                        showMcp = true
+                    },
+                )
             }
 
             Row(
@@ -364,6 +375,15 @@ fun SettingsScreen(
                 showTools = false
                 actions.setEnabledTools(it)
             },
+        )
+    }
+
+    if (showMcp) {
+        McpDialog(
+            servers = mcpServers,
+            listTools = actions.listMcpTools,
+            onSave = actions.setMcpServers,
+            onDismiss = { showMcp = false },
         )
     }
 
