@@ -72,8 +72,11 @@ server.
   pages through long content 8k characters at a time by default, choosing its
   own offset and length) and **JavaScript** (runs code in a sandbox for exact
   math and data work). Calls show inline as collapsible rows, and **Modify**
-  can edit or remove a call's arguments and result. Needs a model and endpoint
-  with tool-call support.
+  can edit or remove a call's arguments and result. Each tool is **Off**,
+  **Ask** or **Allow**: a call to an **Ask** tool waits in the chat with its
+  arguments and **Deny** / **Allow** (plus **Allow all** when the model makes
+  several at once, and **Don't ask again**); a denied call tells the model so
+  and the reply carries on. Needs a model and endpoint with tool-call support.
 - **Linked files** — with **Files** on in the Tools dialog, the `+` menu can link an
   existing text file or create a new one (any extension) to send with a
   message. The model can then read it by line, search it, append to it or make
@@ -82,11 +85,24 @@ server.
   storage permission and only ever sees the files you pick. Linked files show
   on their message and in **Properties**; tap one to view it, or unlink it.
 - **MCP servers** — the **MCP** chip beside Tools adds remote [Model Context
-  Protocol](https://modelcontextprotocol.io) servers over Streamable HTTP, with
-  an optional bearer token (stored encrypted). Connecting lists the server's
-  tools, each of which can be switched off; the model sees them as
-  `server__tool`. A server on the phone itself (e.g. in Termux) is reached at
-  `http://127.0.0.1`.
+  Protocol](https://modelcontextprotocol.io) servers, alongside the built-in
+  tools:
+  - **Streamable HTTP** with an optional bearer token (encrypted at rest like
+    API keys). Point it at a server on your network, in the cloud, or on the
+    phone itself (e.g. in Termux, at `http://127.0.0.1`).
+  - **Tools are listed as soon as the URL is entered** and cached, so a reply
+    never waits on the server just to know what it offers; **Refresh tools**
+    picks up changes.
+  - **Per-tool control** — each tool is **Off**, **Ask** (the default for MCP)
+    or **Allow**, tagged with what the server says it does (network access,
+    writes). **Trust this server** lets all of its tools run without asking.
+  - **Clash-free names** — the model sees `server__tool`, so tools from
+    different servers never collide with each other or the built-ins.
+  - **Results** — text and structured content go back to the model; images
+    and other binary content are noted rather than sent. Server errors and
+    tool failures reach the model as errors it can react to.
+  - Not supported: the older HTTP+SSE transport, local `stdio` servers and
+    OAuth sign-in.
 - **Endpoint presets and a model-picker pill** for switching servers and models
   in a couple of taps.
 - **Personalisation** — AMOLED-true-black theme with a custom accent colour,
