@@ -1,5 +1,6 @@
 package com.hatsyrei.maidnative.ui.settings
 
+import com.hatsyrei.maidnative.ui.i18n.tr
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -73,7 +74,7 @@ internal fun SamplingChip(group: SamplingGroup, sampling: Sampling, onClick: () 
     val active = overrides > 0
     AssistChip(
         onClick = onClick,
-        label = { Text(if (active) "${group.title} · $overrides" else group.title) },
+        label = { Text(if (active) "${tr(group.title)} · $overrides" else tr(group.title)) },
         leadingIcon = { Icon(group.icon, contentDescription = null) },
         // Filled when something is overridden, so the screen says at a glance
         // whether requests carry anything beyond the endpoint's own settings.
@@ -107,7 +108,7 @@ internal fun SamplingDialog(
 
     AppDialog(
         onDismissRequest = onDismiss,
-        title = { Text(group.title) },
+        title = { Text(tr(group.title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 group.params.forEach { param ->
@@ -116,10 +117,10 @@ internal fun SamplingDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(draft) }) { Text("Save") }
+            TextButton(onClick = { onConfirm(draft) }) { Text(tr("Save")) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(tr("Cancel")) }
         },
     )
 }
@@ -151,16 +152,16 @@ private fun SamplingRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(param.label, style = MaterialTheme.typography.bodyLarge)
+                Text(tr(param.label), style = MaterialTheme.typography.bodyLarge)
                 Text(
-                    param.summary,
+                    tr(param.summary),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            ValuePill(text = if (enabled) param.format(current) else "Auto", active = enabled)
+            ValuePill(text = if (enabled) param.format(current) else tr("Auto"), active = enabled)
         }
 
         AnimatedVisibility(

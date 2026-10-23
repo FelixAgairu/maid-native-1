@@ -1,5 +1,6 @@
 package com.hatsyrei.maidnative.ui.common
 
+import com.hatsyrei.maidnative.ui.i18n.tr
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +33,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -56,6 +58,7 @@ internal fun AppDialog(
     dismissButton: (@Composable () -> Unit)? = null,
     /** A secondary action such as Delete, kept apart at the start of the button row. */
     neutralButton: (@Composable () -> Unit)? = null,
+    widthLimit: Dp = 560.dp,
     text: @Composable () -> Unit,
 ) {
     Dialog(
@@ -71,9 +74,9 @@ internal fun AppDialog(
             val scroll = rememberScrollState()
             Surface(
                 modifier = Modifier
-                    .widthIn(max = 560.dp)
+                    .widthIn(max = widthLimit)
                     .fillMaxWidth()
-                    .semantics { paneTitle = "Dialog" },
+                    .semantics { paneTitle = tr("Dialog") },
                 shape = AlertDialogDefaults.shape,
                 color = MaterialTheme.colorScheme.surfaceContainer,
                 tonalElevation = AlertDialogDefaults.TonalElevation,

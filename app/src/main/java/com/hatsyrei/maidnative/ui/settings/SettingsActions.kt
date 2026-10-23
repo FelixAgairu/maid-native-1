@@ -16,9 +16,14 @@ import com.hatsyrei.maidnative.domain.tools.ToolPolicy
  */
 @Stable
 class SettingsActions(
+    val setLanguage: (String) -> Unit,
     val setBaseURL: (String) -> Unit,
     val setApiKey: (String) -> Unit,
     val setAllowCleartext: (Boolean) -> Unit,
+    val setTrustUserCertificates: (Boolean) -> Unit,
+    val setAutoRenameChats: (Boolean) -> Unit,
+    val setModelPickerTags: (Boolean) -> Unit,
+    val setScrollLongMessages: (Boolean) -> Unit,
     val setModel: (String) -> Unit,
     val refreshModels: () -> Unit,
     val setReasoning: (Boolean) -> Unit,

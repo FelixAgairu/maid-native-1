@@ -1,5 +1,6 @@
 package com.hatsyrei.maidnative.ui.settings
 
+import com.hatsyrei.maidnative.ui.i18n.tr
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -57,7 +58,7 @@ internal fun ToolsChip(enabled: Set<String>, onClick: () -> Unit) {
     val active = count > 0
     AssistChip(
         onClick = onClick,
-        label = { Text(if (active) "Tools · $count" else "Tools") },
+        label = { Text(if (active) tr("Tools · {0}" , count) else tr("Tools")) },
         // The wrench fills its box more than the other chip glyphs, so it runs a size down.
         leadingIcon = { Icon(Icons.Filled.Build, contentDescription = null, modifier = Modifier.size(16.dp)) },
         // Filled for the same reason as the sampling chip: requests carry more than the chat.
@@ -96,7 +97,7 @@ internal fun ToolsDialog(
 
     AppDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Tools") },
+        title = { Text(tr("Tools")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Tools.switches.forEach { tool ->
@@ -105,10 +106,10 @@ internal fun ToolsDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(draft) }) { Text("Save") }
+            TextButton(onClick = { onConfirm(draft) }) { Text(tr("Save")) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(tr("Cancel")) }
         },
     )
 }
@@ -139,7 +140,7 @@ internal fun ToolRow(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    tool.label,
+                    tr(tool.label),
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -148,7 +149,7 @@ internal fun ToolRow(
                 tool.effects.forEach { EffectTag(it) }
             }
             Text(
-                tool.summary,
+                tr(tool.summary),
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant,
                 maxLines = 1,
@@ -173,7 +174,7 @@ internal fun ToolRow(
                                 activeContentColor = colors.onSurfaceVariant,
                             ),
                             icon = {},
-                            label = { Text(choice.label, style = MaterialTheme.typography.labelMedium) },
+                            label = { Text(tr(choice.label), style = MaterialTheme.typography.labelMedium) },
                             modifier = Modifier.height(32.dp),
                         )
                     }
@@ -191,7 +192,7 @@ private fun EffectTag(effect: ToolEffect) {
         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
     ) {
         Text(
-            effect.label,
+            tr(effect.label),
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
         )

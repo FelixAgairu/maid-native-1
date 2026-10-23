@@ -1,5 +1,6 @@
 package com.hatsyrei.maidnative.ui.settings
 
+import com.hatsyrei.maidnative.ui.i18n.tr
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -93,10 +94,10 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(tr("Settings")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("Back"))
                     }
                 },
             )
@@ -119,12 +120,13 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            LanguageSection(state.settings.language, actions.setLanguage)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Endpoint", style = MaterialTheme.typography.titleMedium)
+                Text(tr("Endpoint"), style = MaterialTheme.typography.titleMedium)
                 // Matches the scan button's width so the two icons share a centre line.
                 IconButton(
                     onClick = {
@@ -135,7 +137,7 @@ fun SettingsScreen(
                     },
                     modifier = Modifier.size(56.dp),
                 ) {
-                    Icon(BookmarksIcon, contentDescription = "Saved endpoints")
+                    Icon(BookmarksIcon, contentDescription = tr("Saved endpoints"))
                 }
             }
 
@@ -147,7 +149,7 @@ fun SettingsScreen(
                 AutoSaveTextField(
                     state = baseURL,
                     committed = state.settings.baseURL,
-                    label = "Base URL",
+                    label = tr("Base URL"),
                     onCommit = actions.setBaseURL,
                     modifier = Modifier.weight(1f),
                     // A URL is not prose: autocorrect, suggestions and sentence
@@ -173,7 +175,7 @@ fun SettingsScreen(
             AutoSaveTextField(
                 state = apiKey,
                 committed = state.settings.apiKey,
-                label = "API key (optional for local endpoints)",
+                label = tr("API key (optional for local endpoints)"),
                 onCommit = actions.setApiKey,
                 modifier = Modifier.fillMaxWidth(),
                 secure = true,
@@ -183,8 +185,7 @@ fun SettingsScreen(
             // sent anywhere else, so both of these want fixing where it is typed.
             if (state.settings.apiKeyUnreadable) {
                 Text(
-                    "The stored API key can no longer be decrypted on this device. " +
-                        "Enter it again to replace it.",
+                    tr("The stored API key can no longer be decrypted on this device. Enter it again to replace it."),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -199,10 +200,9 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Allow HTTP endpoints", style = MaterialTheme.typography.bodyLarge)
+                    Text(tr("Allow HTTP endpoints"), style = MaterialTheme.typography.bodyLarge)
                     Text(
-                        "Unencrypted HTTP. Only enable on trusted networks. " +
-                            "Local servers may need this.",
+                        tr("Unencrypted HTTP. Only enable on trusted networks. Local servers may need this."),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -215,13 +215,21 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(8.dp))
 
-            Text("Model", style = MaterialTheme.typography.titleMedium)
+            PreferenceSwitch(
+                title = tr("Trust user-installed certificates"),
+                description = tr("Off: system certificates only. On: system and user-installed CA certificates for API and MCP connections. Hostname and certificate checks remain enabled. Restart the app after installing or removing a CA."),
+                checked = state.settings.trustUserCertificates,
+                enabled = !state.busy,
+                onChange = actions.setTrustUserCertificates,
+            )
+
+            Text(tr("Model"), style = MaterialTheme.typography.titleMedium)
             state.error?.let {
                 Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
             if (state.models.isEmpty()) {
                 Text(
-                    "No models loaded. Tap the scan button or refresh to fetch /models.",
+                    tr("No models loaded. Tap the scan button or refresh to fetch /models."),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -230,13 +238,15 @@ fun SettingsScreen(
                     models = state.models,
                     selected = state.settings.model,
                     onSelect = actions.setModel,
+                    tags = state.settings.modelPickerTags,
+                    onTagsChange = actions.setModelPickerTags,
                 )
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AssistChip(
                     onClick = actions.refreshModels,
                     enabled = !state.refreshingModels,
-                    label = { Text("Refresh models") },
+                    label = { Text(tr("Refresh models")) },
                     leadingIcon = {
                         if (state.refreshingModels) {
                             CircularProgressIndicator(
@@ -283,10 +293,9 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Thinking", style = MaterialTheme.typography.bodyLarge)
+                    Text(tr("Thinking"), style = MaterialTheme.typography.bodyLarge)
                     Text(
-                        "Asks the endpoint to enable or disable the model's reasoning " +
-                            "trace. Endpoints that don't support the request ignore it.",
+                        tr("Asks the endpoint to enable or disable the model's reasoning trace. Endpoints that don't support the request ignore it."),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -307,6 +316,27 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(8.dp))
 
+            PreferenceSwitch(
+                title = tr("Automatically name new chats"),
+                description = tr("Uses the first message locally; keeps manually chosen titles and uses no extra tokens."),
+                checked = state.settings.autoRenameChats,
+                onChange = actions.setAutoRenameChats,
+            )
+            val totalUsage = remember(state.mappings) {
+                com.hatsyrei.maidnative.domain.TokenUsageSummary.fromNodes(state.mappings.values)
+            }
+            Text(tr("Token usage · saved history"), style = MaterialTheme.typography.titleMedium)
+            Text(com.hatsyrei.maidnative.ui.chat.formatUsage(totalUsage),
+                style = MaterialTheme.typography.bodyMedium)
+            Text(tr("All saved chats and branches; deleted replies are excluded. Only server-reported usage is counted. Open a chat's Properties for details."),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            PreferenceSwitch(
+                title = tr("Scroll long messages"),
+                description = tr("Long messages and reasoning scroll inside their cards. Expand any card to read it in full."),
+                checked = state.settings.scrollLongMessages,
+                onChange = actions.setScrollLongMessages,
+            )
             ChatSection(
                 userName = state.settings.userName,
                 assistantName = state.settings.assistantName,
@@ -390,8 +420,8 @@ fun SettingsScreen(
 
     if (savingNew) {
         PresetNameDialog(
-            title = "Save endpoint",
-            confirmLabel = "Save",
+            title = tr("Save endpoint"),
+            confirmLabel = tr("Save"),
             initial = defaultPresetName(baseURL.text.toString()),
             takenNames = presets.map { it.name },
             onDismiss = { savingNew = false },
@@ -404,8 +434,8 @@ fun SettingsScreen(
 
     naming?.let { preset ->
         PresetNameDialog(
-            title = "Rename preset",
-            confirmLabel = "Rename",
+            title = tr("Rename preset"),
+            confirmLabel = tr("Rename"),
             initial = preset.name,
             takenNames = presets.filter { it.id != preset.id }.map { it.name },
             onDismiss = { naming = null },
@@ -418,8 +448,8 @@ fun SettingsScreen(
 
     deleting?.let { preset ->
         ConfirmDialog(
-            title = "Delete preset",
-            message = "\"${preset.name}\" and its stored API key will be removed from this device.",
+            title = tr("Delete preset"),
+            message = tr("\"{0}\" and its stored API key will be removed from this device." , preset.name),
             onDismiss = { deleting = null },
             onConfirm = {
                 deleting = null

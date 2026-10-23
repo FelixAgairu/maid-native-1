@@ -1,5 +1,6 @@
 package com.hatsyrei.maidnative.ui.chat
 
+import com.hatsyrei.maidnative.ui.i18n.tr
 import android.graphics.BitmapFactory
 import android.media.MediaPlayer
 import android.net.Uri
@@ -97,7 +98,7 @@ internal fun AttachmentViewer(
                 onClick = { saveLauncher.launch(attachment.name) },
                 enabled = available,
             ) {
-                Icon(SaveAltIcon, contentDescription = "Save a copy")
+                Icon(SaveAltIcon, contentDescription = tr("Save a copy"))
             }
         },
     ) {
@@ -167,7 +168,7 @@ private fun ViewerDialog(
                     )
                     actions()
                     IconButton(onClick = onDismiss) {
-                        Icon(CloseIcon, contentDescription = "Close")
+                        Icon(CloseIcon, contentDescription = tr("Close"))
                     }
                 }
             }
@@ -295,7 +296,7 @@ private fun AudioPane(attachment: Attachment) {
                 ) {
                     Icon(
                         if (playing) PauseIcon else Icons.Filled.PlayArrow,
-                        contentDescription = if (playing) "Pause" else "Play",
+                        contentDescription = if (playing) tr("Pause") else tr("Play"),
                         modifier = Modifier.size(32.dp),
                     )
                 }
@@ -344,7 +345,7 @@ private fun TextPane(key: String, load: suspend () -> String?) {
 @Composable
 private fun Missing() {
     Text(
-        text = "This file is no longer available.",
+        text = tr("This file is no longer available."),
         style = MaterialTheme.typography.bodyMedium,
     )
 }

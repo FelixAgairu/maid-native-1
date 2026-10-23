@@ -1,5 +1,6 @@
 package com.hatsyrei.maidnative.ui.settings
 
+import com.hatsyrei.maidnative.ui.i18n.tr
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -56,7 +57,7 @@ internal fun ChatSection(
     val user = rememberTextFieldState(userName, TextRange.Zero)
     val assistant = rememberTextFieldState(assistantName, TextRange.Zero)
 
-    Text("Chat", style = MaterialTheme.typography.titleMedium)
+    Text(tr("Chat"), style = MaterialTheme.typography.titleMedium)
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -69,13 +70,13 @@ internal fun ChatSection(
             role = AvatarStore.Role.USER,
             stamp = userAvatar,
             name = user.text.toString(),
-            label = "Your profile picture",
+            label = tr("Your profile picture"),
             actions = actions,
         )
         AutoSaveTextField(
             state = user,
             committed = userName,
-            label = "Your name",
+            label = tr("Your name"),
             onCommit = { value ->
                 // Normalise locally too: the stored value falls back to the default
                 // when blank, and an unchanged fallback wouldn't re-key the field.
@@ -97,13 +98,13 @@ internal fun ChatSection(
             role = AvatarStore.Role.ASSISTANT,
             stamp = assistantAvatar,
             name = assistant.text.toString(),
-            label = "Assistant profile picture",
+            label = tr("Assistant profile picture"),
             actions = actions,
         )
         AutoSaveTextField(
             state = assistant,
             committed = assistantName,
-            label = "Assistant name",
+            label = tr("Assistant name"),
             onCommit = { value ->
                 val name = value.trim().ifBlank { SettingsRepository.DEFAULT_ASSISTANT_NAME }
                 assistant.replaceText(name, caretAtStart = true)
@@ -120,9 +121,9 @@ internal fun ChatSection(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text("Export media", style = MaterialTheme.typography.bodyLarge)
+            Text(tr("Export media"), style = MaterialTheme.typography.bodyLarge)
             Text(
-                "Includes attached images and audio in exported conversations.",
+                tr("Includes attached images and audio in exported conversations."),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -170,7 +171,7 @@ private fun AvatarPicker(
             onDismiss = { open = false },
         ) {
             MenuOption(
-                text = if (stamp == 0L) "Select image" else "Change image",
+                text = if (stamp == 0L) tr("Select image") else tr("Change image"),
                 trailingIcon = { Icon(ImageIcon, contentDescription = null) },
                 onClick = {
                     open = false
@@ -180,7 +181,7 @@ private fun AvatarPicker(
                 },
             )
             MenuOption(
-                text = "Remove",
+                text = tr("Remove"),
                 trailingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
                 enabled = stamp != 0L,
                 onClick = {

@@ -1,5 +1,6 @@
 package com.hatsyrei.maidnative.ui.chat
 
+import com.hatsyrei.maidnative.ui.i18n.tr
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -105,7 +106,7 @@ internal fun EditDialog(
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
                     Text(
-                        text = if (revise) "Revise message" else "Edit message",
+                        text = if (revise) tr("Revise message") else tr("Edit message"),
                         style = MaterialTheme.typography.headlineSmall,
                     )
                     OutlinedTextField(
@@ -142,12 +143,12 @@ internal fun EditDialog(
                             .padding(top = 8.dp),
                         horizontalArrangement = Arrangement.End,
                     ) {
-                        TextButton(onClick = onDismiss) { Text("Cancel") }
+                        TextButton(onClick = onDismiss) { Text(tr("Cancel")) }
                         TextButton(
                             onClick = { onConfirm(text.text.toString(), attachments, calls) },
                             enabled = text.text.isNotBlank() || attachments.isNotEmpty(),
                         ) {
-                            Text(if (revise) "Send" else "Save")
+                            Text(if (revise) tr("Send") else tr("Save"))
                         }
                     }
                 }
@@ -169,11 +170,11 @@ internal fun ConfirmDialog(
         text = { Text(message) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Delete", color = MaterialTheme.colorScheme.error)
+                Text(tr("Delete"), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(tr("Cancel")) }
         },
     )
 }

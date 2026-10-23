@@ -49,6 +49,12 @@ class SettingsRepository(private val context: Context) {
          * network; local servers need it turned on deliberately.
          */
         val allowCleartext: Boolean = false,
+        /** System certificates are always trusted; this opts API/MCP requests into user-installed CAs. */
+        val trustUserCertificates: Boolean = false,
+        val autoRenameChats: Boolean = true,
+        val modelPickerTags: Boolean = false,
+        val scrollLongMessages: Boolean = true,
+        val language: String = "",
         val model: String = "",
         val systemPrompt: String = DEFAULT_SYSTEM_PROMPT,
         /**
@@ -129,6 +135,11 @@ class SettingsRepository(private val context: Context) {
             // already configured over HTTP predates the toggle and keeps
             // working; a fresh install sits on the HTTPS default and starts off.
             allowCleartext = prefs[KEY_ALLOW_CLEARTEXT] ?: Endpoints.isCleartext(baseURL),
+            trustUserCertificates = prefs[KEY_TRUST_USER_CERTIFICATES] ?: false,
+            autoRenameChats = prefs[KEY_AUTO_RENAME] ?: true,
+            modelPickerTags = prefs[KEY_MODEL_PICKER_TAGS] ?: false,
+            scrollLongMessages = prefs[KEY_SCROLL_LONG_MESSAGES] ?: true,
+            language = prefs[KEY_LANGUAGE] ?: "",
             model = prefs[KEY_MODEL] ?: "",
             systemPrompt = prefs[KEY_SYSTEM_PROMPT] ?: DEFAULT_SYSTEM_PROMPT,
             reasoning = prefs[KEY_REASONING] ?: true,
@@ -233,6 +244,20 @@ class SettingsRepository(private val context: Context) {
     }
 
     suspend fun setModel(value: String) = edit(KEY_MODEL, value)
+    suspend fun setTrustUserCertificates(value: Boolean) {
+        context.dataStore.edit { it[KEY_TRUST_USER_CERTIFICATES] = value }
+    }
+    suspend fun setAutoRenameChats(value: Boolean) {
+        context.dataStore.edit { it[KEY_AUTO_RENAME] = value }
+    }
+    suspend fun setModelPickerTags(value: Boolean) {
+        context.dataStore.edit { it[KEY_MODEL_PICKER_TAGS] = value }
+    }
+    suspend fun setScrollLongMessages(value: Boolean) {
+        context.dataStore.edit { it[KEY_SCROLL_LONG_MESSAGES] = value }
+    }
+
+    suspend fun setLanguage(value: String) { context.dataStore.edit { it[KEY_LANGUAGE] = value } }
     suspend fun setUserName(value: String) = edit(KEY_USER_NAME, value.trim())
     suspend fun setAssistantName(value: String) = edit(KEY_ASSISTANT_NAME, value.trim())
     suspend fun setNameplate(value: String) = edit(KEY_NAMEPLATE, value)
@@ -504,6 +529,11 @@ class SettingsRepository(private val context: Context) {
         private val KEY_API_KEY = stringPreferencesKey("open-ai-api-key")
         private val KEY_API_KEY_ORIGIN = stringPreferencesKey("open-ai-api-key-origin")
         private val KEY_ALLOW_CLEARTEXT = booleanPreferencesKey("allow-cleartext-endpoints")
+        private val KEY_TRUST_USER_CERTIFICATES = booleanPreferencesKey("trust-user-certificates")
+        private val KEY_AUTO_RENAME = booleanPreferencesKey("auto-rename-chats")
+        private val KEY_MODEL_PICKER_TAGS = booleanPreferencesKey("model-picker-tags")
+        private val KEY_SCROLL_LONG_MESSAGES = booleanPreferencesKey("scroll-long-messages")
+        private val KEY_LANGUAGE = stringPreferencesKey("language")
         private val KEY_MODEL = stringPreferencesKey("open-ai-model")
         private val KEY_SYSTEM_PROMPT = stringPreferencesKey("system-prompt")
         private val KEY_REASONING = booleanPreferencesKey("reasoning-enabled")

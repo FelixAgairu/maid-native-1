@@ -1,5 +1,6 @@
 package com.hatsyrei.maidnative.ui.chat
 
+import com.hatsyrei.maidnative.ui.i18n.tr
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.hatsyrei.maidnative.domain.ChatStats
+import com.hatsyrei.maidnative.domain.TokenUsageSummary
 import com.hatsyrei.maidnative.domain.tools.LinkedFile
 import com.hatsyrei.maidnative.ui.common.AppDialog
 
@@ -28,6 +30,8 @@ import com.hatsyrei.maidnative.ui.common.AppDialog
 internal fun ChatPropertiesDialog(
     title: String,
     stats: ChatStats,
+    usage: TokenUsageSummary,
+    allBranchesUsage: TokenUsageSummary,
     files: List<LinkedFile>,
     onOpenFile: (LinkedFile) -> Unit,
     onUnlinkFile: (LinkedFile) -> Unit,
@@ -38,13 +42,23 @@ internal fun ChatPropertiesDialog(
         title = { Text(title, maxLines = 2) },
         text = {
             Column {
+                Text(tr("Token usage · active branch"), style = MaterialTheme.typography.titleSmall)
+                StatRow(tr("Input tokens"), usage.input?.formatted() ?: UNKNOWN)
+                StatRow(tr("Output tokens"), usage.output?.formatted() ?: UNKNOWN)
+                StatRow(if (usage.partial) tr("Known total (partial)") else tr("Total tokens"), usage.total?.formatted() ?: UNKNOWN)
+                StatRow(tr("Complete usage records"), "${usage.completeRequests} / ${usage.requests}")
+                Text(tr("All retained branches"), style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(top = 16.dp))
+                Text(formatUsage(allBranchesUsage), style = MaterialTheme.typography.bodySmall)
+                Note(tr("Usage sums API requests, including tool continuations and repeated input history. Missing or interrupted records remain partial. Deleted replies are excluded; this is not a billing ledger."))
+                if (allBranchesUsage.legacyTurns > 0) Note(tr("Older tool replies may only include the final request's usage."))
                 StatRow(
-                    "Conversation size",
+                    tr("Conversation size"),
                     stats.conversationTokens.tokens(stats.sizeAccuracy),
                 )
-                StatRow("Average speed", stats.tokensPerSecond.tokensPerSecond())
-                StatRow("Average response", stats.averageResponseMs.duration())
-                StatRow("Time to first token", stats.averageTtftMs.duration())
+                StatRow(tr("Average speed"), stats.tokensPerSecond.tokensPerSecond())
+                StatRow(tr("Average response"), stats.averageResponseMs.duration())
+                StatRow(tr("Time to first token"), stats.averageTtftMs.duration())
                 val notes = stats.notes()
                 if (notes.isNotEmpty()) {
                     Column(
@@ -56,7 +70,7 @@ internal fun ChatPropertiesDialog(
                 }
                 if (files.isNotEmpty()) {
                     Text(
-                        text = "Linked files",
+                        text = tr("Linked files"),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
@@ -66,7 +80,7 @@ internal fun ChatPropertiesDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            TextButton(onClick = onDismiss) { Text(tr("Close")) }
         },
     )
 }
@@ -83,12 +97,13 @@ private fun StatRow(label: String, value: String) {
             text = label,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(end = 16.dp),
+            modifier = Modifier.weight(1f).padding(end = 16.dp),
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.End,
+            modifier = Modifier.weight(1f),
         )
     }
 }
@@ -115,8 +130,7 @@ private fun ChatStats.notes(): List<String> = buildList {
     sizeNote()?.let { add(it) }
     if (partialSample) {
         add(
-            "Averages cover $statsTurns of $assistantMessages replies; " +
-                "metadata unavailable for the rest.",
+            tr("Averages cover {0} of {1} replies; metadata unavailable for the rest." , statsTurns, assistantMessages),
         )
     }
 }
@@ -126,9 +140,9 @@ private fun ChatStats.sizeNote(): String? {
     return when (sizeAccuracy) {
         ChatStats.SizeAccuracy.EXACT -> null
         ChatStats.SizeAccuracy.AT_LEAST ->
-            "The conversation has grown since it was last counted; the next reply will update it."
+            tr("The conversation has grown since it was last counted; the next reply will update it.")
         ChatStats.SizeAccuracy.AT_MOST ->
-            "The conversation has shrunk since it was last counted; the next reply will update it."
+            tr("The conversation has shrunk since it was last counted; the next reply will update it.")
     }
 }
 

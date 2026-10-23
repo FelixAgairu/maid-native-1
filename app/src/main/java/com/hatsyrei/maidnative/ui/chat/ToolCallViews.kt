@@ -1,5 +1,6 @@
 package com.hatsyrei.maidnative.ui.chat
 
+import com.hatsyrei.maidnative.ui.i18n.tr
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -72,7 +73,7 @@ internal fun ToolCallsBlock(
                 onClick = { onApprove(waiting.map { it.id }, true, false) },
                 modifier = Modifier.align(Alignment.End),
             ) {
-                Text("Allow all (${waiting.size})")
+                Text(tr("Allow all ({0})" , waiting.size))
             }
         }
     }
@@ -90,7 +91,7 @@ private fun ApprovalRow(call: ToolCall, onApprove: (ids: List<String>, allow: Bo
         Column(modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 6.dp)) {
             ToolHeader(call)
             if (call.arguments.isNotBlank() && call.arguments != "{}") {
-                ToolDetail(label = "Arguments", text = prettyJson(call.arguments))
+                ToolDetail(label = tr("Arguments"), text = prettyJson(call.arguments))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Row(
@@ -100,12 +101,12 @@ private fun ApprovalRow(call: ToolCall, onApprove: (ids: List<String>, allow: Bo
                         .toggleable(value = always, role = Role.Checkbox, onValueChange = { always = it }),
                 ) {
                     Checkbox(checked = always, onCheckedChange = null, modifier = Modifier.padding(end = 8.dp))
-                    Text("Don't ask again", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+                    Text(tr("Don't ask again"), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                 }
                 TextButton(onClick = { onApprove(listOf(call.id), false, false) }) {
-                    Text("Deny", color = colors.error)
+                    Text(tr("Deny"), color = colors.error)
                 }
-                TextButton(onClick = { onApprove(listOf(call.id), true, always) }) { Text("Allow") }
+                TextButton(onClick = { onApprove(listOf(call.id), true, always) }) { Text(tr("Allow")) }
             }
         }
     }
@@ -126,14 +127,14 @@ private fun ToolCallRow(call: ToolCall) {
             ToolHeader(call) {
                 if (running) {
                     Text(
-                        text = "Running…",
+                        text = tr("Running…"),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else {
                     Icon(
                         if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                        contentDescription = if (expanded) "Hide tool result" else "Show tool result",
+                        contentDescription = if (expanded) tr("Hide tool result") else tr("Show tool result"),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp),
                     )
@@ -141,9 +142,9 @@ private fun ToolCallRow(call: ToolCall) {
             }
             if (expanded) {
                 if (call.arguments.isNotBlank() && call.arguments != "{}") {
-                    ToolDetail(label = "Arguments", text = call.arguments)
+                    ToolDetail(label = tr("Arguments"), text = call.arguments)
                 }
-                ToolDetail(label = "Result", text = call.result.orEmpty())
+                ToolDetail(label = tr("Result"), text = call.result.orEmpty())
             }
         }
     }
@@ -232,7 +233,7 @@ internal fun LinkedFileRows(
                     IconButton(onClick = { onUnlink(file) }, modifier = Modifier.size(32.dp)) {
                         Icon(
                             CloseIcon,
-                            contentDescription = "Unlink ${file.name}",
+                            contentDescription = tr("Unlink {0}" , file.name),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp),
                         )
@@ -273,14 +274,14 @@ internal fun ToolCallChips(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Tool calls · ${calls.size}",
+                text = tr("Tool calls · {0}" , calls.size),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f),
             )
             Icon(
                 if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                contentDescription = if (expanded) "Hide tool calls" else "Show tool calls",
+                contentDescription = if (expanded) tr("Hide tool calls") else tr("Show tool calls"),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(18.dp),
             )
@@ -301,7 +302,7 @@ internal fun ToolCallChips(
                     EditChip(
                         label = "$key · ${call.name}",
                         unused = key !in present,
-                        removeDescription = "Remove ${call.name} call",
+                        removeDescription = tr("Remove {0} call" , call.name),
                         onOpen = { editing = key },
                         onRemove = { onRemove(key) },
                     )
@@ -383,16 +384,16 @@ private fun ToolCallDialog(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     state = arguments,
-                    label = { Text("Arguments") },
+                    label = { Text(tr("Arguments")) },
                     textStyle = mono,
                     isError = !argumentsValid,
-                    supportingText = if (argumentsValid) null else { { Text("Must be a JSON object") } },
+                    supportingText = if (argumentsValid) null else { { Text(tr("Must be a JSON object")) } },
                     lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 4),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     state = result,
-                    label = { Text("Result") },
+                    label = { Text(tr("Result")) },
                     textStyle = mono,
                     lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = 3, maxHeightInLines = 8),
                     modifier = Modifier.fillMaxWidth(),
@@ -404,11 +405,11 @@ private fun ToolCallDialog(
                 onClick = { onConfirm(call.copy(arguments = argumentsText, result = result.text.toString())) },
                 enabled = argumentsValid,
             ) {
-                Text("Save")
+                Text(tr("Save"))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(tr("Cancel")) }
         },
     )
 }

@@ -1,5 +1,6 @@
 package com.hatsyrei.maidnative.ui.chat
 
+import com.hatsyrei.maidnative.ui.i18n.tr
 import android.content.ClipData
 import android.graphics.BitmapFactory
 import android.util.LruCache
@@ -133,7 +134,7 @@ internal fun SystemPromptCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "System",
+                text = tr("System"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f),
@@ -145,7 +146,7 @@ internal fun SystemPromptCard(
             ) {
                 Icon(
                     Icons.Filled.Edit,
-                    contentDescription = "Edit system prompt",
+                    contentDescription = tr("Edit system prompt"),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -173,6 +174,7 @@ internal fun MessageItem(
     assistantName: String,
     userAvatar: Painter?,
     assistantAvatar: Painter?,
+    scrollLongMessages: Boolean,
     onRegenerate: () -> Unit,
     onDelete: () -> Unit,
     onRequestEdit: (revise: Boolean) -> Unit,
@@ -223,27 +225,27 @@ internal fun MessageItem(
                 // need a usable model on top of an idle stream.
                 if (node.role == "assistant") {
                     MenuOption(
-                        text = "Regenerate",
+                        text = tr("Regenerate"),
                         trailingIcon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
                         enabled = !busy && ready,
                         onClick = { closeMenu(); onRegenerate() },
                     )
                 } else {
                     MenuOption(
-                        text = "Revise",
+                        text = tr("Revise"),
                         trailingIcon = { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null) },
                         enabled = !busy && ready,
                         onClick = { closeMenu(); onRequestEdit(true) },
                     )
                 }
                 MenuOption(
-                    text = "Modify",
+                    text = tr("Modify"),
                     trailingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
                     enabled = !busy,
                     onClick = { closeMenu(); onRequestEdit(false) },
                 )
                 MenuOption(
-                    text = "Copy",
+                    text = tr("Copy"),
                     trailingIcon = { Icon(ContentCopyIcon, contentDescription = null) },
                     onClick = {
                         closeMenu()
@@ -260,7 +262,7 @@ internal fun MessageItem(
                     },
                 )
                 MenuOption(
-                    text = "Delete",
+                    text = tr("Delete"),
                     textColor = MaterialTheme.colorScheme.error,
                     trailingIcon = {
                         Icon(
@@ -275,7 +277,8 @@ internal fun MessageItem(
             }
         }
         MessageHeader(
-            name = if (isUser) userName else assistantName,
+            name = if (isUser) { if (userName == "User") tr("User") else userName }
+                else { if (assistantName == "Assistant") tr("Assistant") else assistantName },
             avatar = if (isUser) userAvatar else assistantAvatar,
             controls = {
                 if (siblingCount > 1) {
@@ -286,7 +289,7 @@ internal fun MessageItem(
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                            contentDescription = "Previous branch",
+                            contentDescription = tr("Previous branch"),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -303,7 +306,7 @@ internal fun MessageItem(
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = "Next branch",
+                            contentDescription = tr("Next branch"),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -344,19 +347,21 @@ internal fun MessageItem(
                     tint = MaterialTheme.colorScheme.primary,
                 )
                 Text(
-                    text = if (reasoningExpanded) "Hide reasoning" else "Show reasoning",
+                    text = if (reasoningExpanded) tr("Hide reasoning") else tr("Show reasoning"),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
             if (reasoningExpanded) {
-                Text(
-                    text = reasoning,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontStyle = FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp, start = 4.dp),
-                )
+                ScrollableMessageBody(enabled = scrollLongMessages, identity = "${node.id}:reasoning") {
+                    Text(
+                        text = reasoning,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontStyle = FontStyle.Italic,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp, start = 4.dp),
+                    )
+                }
             }
         }
         val body = content ?: ""
@@ -366,63 +371,67 @@ internal fun MessageItem(
         val segments = remember(if (live != null) cut else body, calls) {
             ToolText.parse(body.substring(0, cut), calls)
         }
-        for (segment in segments) {
-            when (segment) {
-                is ToolText.Segment.Text -> MarkdownText(
-                    markdown = segment.text,
-                    modifier = Modifier.padding(top = 8.dp),
-                    deferParse = !isLatest,
-                )
-                is ToolText.Segment.Calls -> ToolCallsBlock(
-                    calls = segment.calls,
-                    awaiting = live?.awaiting.orEmpty(),
-                    onApprove = onApproveTools,
-                    modifier = Modifier.padding(top = 10.dp),
-                )
+        ScrollableMessageBody(enabled = scrollLongMessages, identity = node.id) {
+            for (segment in segments) {
+                when (segment) {
+                    is ToolText.Segment.Text -> MarkdownText(
+                        markdown = segment.text,
+                        modifier = Modifier.padding(top = 8.dp),
+                        deferParse = !isLatest,
+                    )
+                    is ToolText.Segment.Calls -> ToolCallsBlock(
+                        calls = segment.calls,
+                        awaiting = live?.awaiting.orEmpty(),
+                        onApprove = onApproveTools,
+                        modifier = Modifier.padding(top = 10.dp),
+                    )
+                }
             }
-        }
-        val tailBlank = if (live != null) {
-            (cut until body.length).all { body[it].isWhitespace() }
-        } else {
-            body.isBlank()
-        }
-        if (node.role == "assistant" && tailBlank && busy && isLatest) {
-            // Placeholder shown only on the newest assistant bubble while waiting
-            // on the endpoint / first tokens. Gated on `busy` so it clears if the
-            // stream ends or errors before any tokens arrive.
-            Text(
-                text = "…",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-        } else if (streamingState != null) {
-            // Actively streaming: render from the incrementally parsed state so
-            // each token re-parses only the trailing block, not the whole reply.
-            StreamingMarkdownText(
-                state = streamingState,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-        }
-        // Absent rather than "N/A" when unknown: a label repeated down every
-        // message of a pre-stats conversation would be noise, and a reply still
-        // streaming has no counts yet, so this doubles as a done marker.
-        if (node.role == "assistant") {
-            val footnote = remember(node.metadata, node.content) {
-                formatTurnFootnote(node.stats(), node.content)
+            val tailBlank = if (live != null) {
+                (cut until body.length).all { body[it].isWhitespace() }
+            } else {
+                body.isBlank()
             }
-            if (footnote != null) {
+            if (node.role == "assistant" && tailBlank && busy && isLatest) {
+                // Placeholder shown only on the newest assistant bubble while waiting
+                // on the endpoint / first tokens. Gated on `busy` so it clears if the
+                // stream ends or errors before any tokens arrive.
                 Text(
-                    text = footnote,
-                    style = MaterialTheme.typography.labelSmall,
-                    // Dimmer than any body text, so it reads as chrome rather
-                    // than as the tail end of the reply.
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    modifier = Modifier
-                        .align(Alignment.End)
-                        .padding(top = 12.dp),
+                    text = "…",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            } else if (streamingState != null) {
+                // Actively streaming: render from the incrementally parsed state so
+                // each token re-parses only the trailing block, not the whole reply.
+                StreamingMarkdownText(
+                    state = streamingState,
+                    modifier = Modifier.padding(top = 8.dp),
                 )
             }
+        }
+        // Recorded API usage describes the original request even after the body is edited.
+        if (node.role == "assistant") {
+            val savedUsage = remember(node.metadata) {
+                com.hatsyrei.maidnative.domain.TokenUsageSummary.fromNodes(listOf(node))
+            }
+            val usage = live?.usage ?: savedUsage
+            val timing = remember(node.metadata, node.content) {
+                formatTurnTiming(node.stats(), node.content)
+            }
+            val footnote = if (live != null && usage.total == null) tr("Token usage pending")
+                else listOfNotNull(formatUsage(usage), timing).joinToString(" · ")
+            Text(
+                text = footnote,
+                style = MaterialTheme.typography.labelSmall,
+                // Dimmer than any body text, so it reads as chrome rather
+                // than as the tail end of the reply.
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .padding(top = 12.dp),
+            )
         }
     }
 }

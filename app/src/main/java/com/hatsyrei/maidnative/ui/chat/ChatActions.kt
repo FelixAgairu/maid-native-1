@@ -38,6 +38,7 @@ class ChatActions(
     val deleteChat: (String) -> Unit,
     val setSystemPrompt: (String) -> Unit,
     val selectModel: (String) -> Unit,
+    val setModelPickerTags: (Boolean) -> Unit,
     val exportFileName: (String) -> String,
     val exportConversation: (String, Uri) -> Unit,
     val importConversations: (List<Uri>) -> Unit,

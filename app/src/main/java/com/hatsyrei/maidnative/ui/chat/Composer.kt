@@ -1,6 +1,8 @@
 package com.hatsyrei.maidnative.ui.chat
 
+import com.hatsyrei.maidnative.ui.i18n.tr
 import android.net.Uri
+import android.content.res.Configuration
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -73,6 +75,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
@@ -146,6 +149,7 @@ internal fun Composer(
     onOpenAttachment: (Attachment) -> Unit,
     onSubmit: (String) -> Unit,
     onStop: () -> Unit,
+    usage: @Composable (String, Boolean) -> Unit = { _, _ -> },
     nameplate: Painter? = LocalNameplate.current,
 ) {
     val input = rememberTextFieldState()
@@ -157,6 +161,7 @@ internal fun Composer(
     // the composer.
     var focused by remember { mutableStateOf(false) }
     val keyboardVisible = WindowInsets.isImeVisible
+    val compact = keyboardVisible && LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     SideEffect { focus.update(focused = focused, keyboardVisible = keyboardVisible) }
 
     // Nameplate art fills the resting pill and fades out once the user engages
@@ -183,7 +188,7 @@ internal fun Composer(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 14.dp)
+            .padding(horizontal = 12.dp, vertical = if (compact) 4.dp else 14.dp)
             .clip(RoundedCornerShape(30.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerHigh),
     ) {
@@ -199,7 +204,7 @@ internal fun Composer(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 6.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                .padding(horizontal = 6.dp, vertical = if (compact) 0.dp else 6.dp),
         ) {
             if (hasChips) {
                 AttachmentChips(
@@ -226,14 +231,14 @@ internal fun Composer(
                     state = input,
                     modifier = Modifier
                         .weight(1f)
-                        .heightIn(max = 120.dp)
+                        .heightIn(max = if (compact) 48.dp else 120.dp)
                         .contentReceiver(imageReceiver)
                         .onFocusChanged { focused = it.isFocused },
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         color = MaterialTheme.colorScheme.onSurface,
                     ),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                    lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 5),
+                    lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = if (compact) 1 else 5),
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Sentences,
                     ),
@@ -244,7 +249,7 @@ internal fun Composer(
                         ) {
                             if (text.isEmpty()) {
                                 Text(
-                                    text = "Message",
+                                    text = tr("Message"),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -295,7 +300,7 @@ internal fun Composer(
                                 } else {
                                     Icon(
                                         ArrowUpwardIcon,
-                                        contentDescription = "Send",
+                                        contentDescription = tr("Send"),
                                         tint = arrowTint,
                                     )
                                 }
@@ -304,6 +309,7 @@ internal fun Composer(
                     }
                 }
             }
+            usage(text.toString(), compact)
         }
     }
 }
@@ -391,7 +397,7 @@ private fun AttachButton(
         IconButton(onClick = { open = true }, enabled = enabled) {
             Icon(
                 AddIcon,
-                contentDescription = "Add attachment",
+                contentDescription = tr("Add attachment"),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -405,7 +411,7 @@ private fun AttachButton(
             modifier = Modifier.widthIn(min = 148.dp, max = 176.dp),
         ) {
             MenuOption(
-                text = "Image",
+                text = tr("Image"),
                 trailingIcon = { Icon(ImageIcon, contentDescription = null) },
                 enabled = modalities.vision.permitted,
                 onClick = {
@@ -416,7 +422,7 @@ private fun AttachButton(
                 },
             )
             MenuOption(
-                text = "Audio",
+                text = tr("Audio"),
                 trailingIcon = { Icon(AudiotrackIcon, contentDescription = null) },
                 enabled = modalities.audio.permitted,
                 onClick = {
@@ -425,7 +431,7 @@ private fun AttachButton(
                 },
             )
             MenuOption(
-                text = "Text file",
+                text = tr("Text file"),
                 trailingIcon = { Icon(DescriptionIcon, contentDescription = null) },
                 onClick = {
                     open = false
@@ -435,7 +441,7 @@ private fun AttachButton(
             if (fileTools) {
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
                 MenuOption(
-                    text = "Link file",
+                    text = tr("Link file"),
                     trailingIcon = { Icon(FolderOpenIcon, contentDescription = null) },
                     onClick = {
                         open = false
@@ -443,7 +449,7 @@ private fun AttachButton(
                     },
                 )
                 MenuOption(
-                    text = "New file",
+                    text = tr("New file"),
                     trailingIcon = { Icon(Icons.Filled.Create, contentDescription = null) },
                     onClick = {
                         open = false
@@ -473,7 +479,7 @@ internal fun AttachmentChips(
         for (file in files) {
             RemovableChip(
                 label = file.name,
-                removeDescription = "Remove ${file.name}",
+                removeDescription = tr("Remove {0}" , file.name),
                 onRemove = { onRemoveFile(file) },
                 color = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -483,7 +489,7 @@ internal fun AttachmentChips(
         for (attachment in attachments) {
             RemovableChip(
                 label = attachment.name,
-                removeDescription = "Remove ${attachment.name}",
+                removeDescription = tr("Remove {0}" , attachment.name),
                 onRemove = { onRemove(attachment) },
                 onOpen = onOpen?.let { { it(attachment) } },
             )

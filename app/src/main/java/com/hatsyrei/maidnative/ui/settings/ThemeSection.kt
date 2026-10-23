@@ -1,5 +1,6 @@
 package com.hatsyrei.maidnative.ui.settings
 
+import com.hatsyrei.maidnative.ui.i18n.tr
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -47,12 +48,12 @@ internal fun ThemeSection(
         ActivityResultContracts.PickVisualMedia(),
     ) { uri -> uri?.let(actions.importNameplate) }
 
-    Text("Theme", style = MaterialTheme.typography.titleMedium)
+    Text(tr("Theme"), style = MaterialTheme.typography.titleMedium)
 
-    Label("Accent")
+    Label(tr("Accent"))
     AccentPicker(selected = accentColor, onSelect = actions.setAccentColor)
 
-    Label("Composer background")
+    Label(tr("Composer background"))
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -62,19 +63,19 @@ internal fun ThemeSection(
         NameplateOption(
             selected = nameplate == SettingsRepository.NAMEPLATE_NONE,
             onClick = { actions.setNameplate(SettingsRepository.NAMEPLATE_NONE) },
-            label = "None",
+            label = tr("None"),
         )
         NameplateOption(
             painter = painterResource(R.drawable.nameplate_blossom),
             selected = nameplate == SettingsRepository.NAMEPLATE_BLOSSOM,
             onClick = { actions.setNameplate(SettingsRepository.NAMEPLATE_BLOSSOM) },
-            label = "Blossom",
+            label = tr("Blossom"),
         )
         NameplateOption(
             painter = painterResource(R.drawable.nameplate_twilight),
             selected = nameplate == SettingsRepository.NAMEPLATE_TWILIGHT,
             onClick = { actions.setNameplate(SettingsRepository.NAMEPLATE_TWILIGHT) },
-            label = "Twilight",
+            label = tr("Twilight"),
         )
         val custom = nameplate == SettingsRepository.NAMEPLATE_CUSTOM
         NameplateOption(
@@ -85,12 +86,12 @@ internal fun ThemeSection(
             onClick = {
                 picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             },
-            label = if (custom) "Change" else "Choose",
+            label = if (custom) tr("Change") else tr("Choose"),
             icon = !custom,
         )
     }
     Text(
-        "Fades out while you type. Images are cropped to the pill and copied into the app.",
+        tr("Fades out while you type. Images are cropped to the pill and copied into the app."),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -146,7 +147,7 @@ private fun NameplateOption(
             if (icon) {
                 Icon(
                     Icons.Filled.Add,
-                    contentDescription = "Choose an image",
+                    contentDescription = tr("Choose an image"),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp),
                 )

@@ -5,7 +5,7 @@
 # Maid Native
 
 A lightweight, Material 3 themed native Android client for OpenAI-compatible
-endpoints. No account, no telemetry, no ads — just a ~2.0 MB APK and your own
+endpoints. No account, no telemetry, no ads — just a small APK and your own
 server.
 
 [![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com)
@@ -105,6 +105,18 @@ server.
     OAuth sign-in.
 - **Endpoint presets and a model-picker pill** for switching servers and models
   in a couple of taps.
+- **Searchable model picker** with a wider dialog and an optional segmented-tag
+  view: `Qwen3.8-27B-Reasoning` becomes `Qwen3.8`, `27B`, and `Reasoning` badges.
+- **Context and cumulative token usage** beside the composer, with persistent
+  per-request accounting and a context-capacity indicator when reported by the
+  server. Estimates and incomplete usage are explicitly labelled.
+- **Conversation conveniences** — optional local automatic titles and bounded
+  scrolling for long replies, with controls to expand the full message.
+- **Optional user CA trust** for API and MCP connections, retaining certificate
+  and hostname verification.
+- **Offline interface languages** — follow the system or select from 66 language
+  and region options. Most translations are machine-assisted and need native
+  speaker review. See [behaviour, translation provenance and validation](docs/chat-enhancements.md).
 - **Personalisation** — AMOLED-true-black theme with a custom accent colour,
   composer nameplate art (bundled or your own image), and custom user /
   assistant display names and profile pictures.

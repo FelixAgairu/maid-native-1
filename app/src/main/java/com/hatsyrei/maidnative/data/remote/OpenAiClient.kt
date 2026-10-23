@@ -63,6 +63,9 @@ class OpenAiClient {
         .callTimeout(5, TimeUnit.SECONDS)
         .build()
 
+    private val streamCertificates = CertificateClients(streamClient)
+    private val requestCertificates = CertificateClients(client)
+
     // Base URLs whose models list identified a server that honours
     // `chat_template_kwargs`. Filled in by [listModels].
     private val thinkingControl: MutableSet<String> = ConcurrentHashMap.newKeySet()
@@ -75,9 +78,10 @@ class OpenAiClient {
         val reasoning: Boolean = true,
         /** Sampling fields the user has taken over; the rest are left out of the request. */
         val sampling: Sampling = Sampling(),
+        val trustUserCertificates: Boolean = false,
     )
 
-    data class ModelInfo(val id: String, val modalities: Modalities)
+    data class ModelInfo(val id: String, val modalities: Modalities, val contextWindow: Long? = null)
 
     /**
      * One thing the stream reported. Reply text and the usage record arrive on
@@ -108,7 +112,7 @@ class OpenAiClient {
             .applyAuth(config.apiKey)
             .get()
             .build()
-        val entries = client.newCall(request).execute().use { response ->
+        val entries = requestCertificates.get(config.trustUserCertificates).newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 throw IOException("models request failed: HTTP ${response.code}")
             }
@@ -131,15 +135,23 @@ class OpenAiClient {
 
         val models = entries.mapNotNull { entry ->
             val id = entry.optString("id").ifEmpty { return@mapNotNull null }
-            ModelInfo(id, entry.architectureModalities())
+            ModelInfo(id, entry.architectureModalities(), entry.contextWindow())
         }
         // A llama.cpp router describes every model it knows here, loaded or
         // not. Anything else leaves `architecture` out entirely, so fall back
         // to the server-wide /props — the only place a single-model llama.cpp
         // states its modalities.
-        if (models.isNotEmpty() && models.all { it.modalities == Modalities.UNKNOWN }) {
-            val props = fetchProps(base, config.apiKey)
-            if (props != null) return models.map { it.copy(modalities = props) }
+        if (models.size == 1 || (models.isNotEmpty() && models.all { it.modalities == Modalities.UNKNOWN })) {
+            val props = fetchProps(base, config.apiKey, config.trustUserCertificates)
+            if (props != null) return models.map {
+                val modalities = props.optJSONObject("modalities")?.let { m ->
+                    Modalities(m.supportFor("vision"), m.supportFor("audio"))
+                }
+                it.copy(
+                    modalities = if (it.modalities == Modalities.UNKNOWN) modalities ?: it.modalities else it.modalities,
+                    contextWindow = if (models.size == 1) props.contextWindow() ?: it.contextWindow else it.contextWindow,
+                )
+            }
         }
         return models
     }
@@ -165,21 +177,16 @@ class OpenAiClient {
      * Failure is silent by design: this is optional enrichment, a strict
      * OpenAI endpoint simply 404s, and modalities then stay UNKNOWN.
      */
-    private fun fetchProps(base: String, apiKey: String): Modalities? {
+    private fun fetchProps(base: String, apiKey: String, trustUserCertificates: Boolean): JSONObject? {
         val request = Request.Builder()
             .url("${base.removeSuffix("/v1")}/props")
             .applyAuth(apiKey)
             .get()
             .build()
         return runCatching {
-            client.newCall(request).execute().use { response ->
+            requestCertificates.get(trustUserCertificates).newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@use null
-                val modalities = JSONObject(response.body.string())
-                    .optJSONObject("modalities") ?: return@use null
-                Modalities(
-                    vision = modalities.supportFor("vision"),
-                    audio = modalities.supportFor("audio"),
-                )
+                JSONObject(response.body.string())
             }
         }.getOrNull()
     }
@@ -287,7 +294,8 @@ class OpenAiClient {
             }
         }
 
-        val eventSource = EventSources.createFactory(streamClient).newEventSource(request, listener)
+        val eventSource = EventSources.createFactory(streamCertificates.get(config.trustUserCertificates))
+            .newEventSource(request, listener)
         awaitClose { eventSource.cancel() }
     }
 
@@ -319,15 +327,15 @@ class OpenAiClient {
      * measured server-side across the whole reply — where our clock can only see
      * the gaps between arriving tokens, and so misses the first one.
      */
-    private fun turnStats(usage: JSONObject?, timings: JSONObject?) = TurnStats(
-        promptTokens = usage?.intOrNull("prompt_tokens"),
-        completionTokens = usage?.intOrNull("completion_tokens"),
+    internal fun turnStats(usage: JSONObject?, timings: JSONObject?) = TurnStats(
+        promptTokens = usage?.intOrNull("prompt_tokens") ?: usage?.intOrNull("input_tokens"),
+        completionTokens = usage?.intOrNull("completion_tokens") ?: usage?.intOrNull("output_tokens"),
         genMs = timings?.msOrNull("predicted_ms"),
         genTokens = timings?.intOrNull("predicted_n"),
     )
 
     private fun JSONObject.intOrNull(key: String): Int? =
-        if (has(key) && !isNull(key)) optInt(key) else null
+        (opt(key) as? Number)?.toLong()?.takeIf { it in 0..Int.MAX_VALUE.toLong() }?.toInt()
 
     /** Durations come over as fractional milliseconds. */
     private fun JSONObject.msOrNull(key: String): Long? =

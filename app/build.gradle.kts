@@ -20,7 +20,7 @@ android {
 
         // androidx.graphics and DataStore ship small native libs; only arm64 devices are targeted.
         ndk {
-            abiFilters += "arm64-v8a"
+            abiFilters += providers.gradleProperty("maid.testAbi").orElse("arm64-v8a").get()
         }
     }
 
@@ -46,9 +46,10 @@ android {
         compose = true
     }
 
+    // In-app language switching must work offline, including in future app bundles.
+    bundle { language { enableSplit = false } }
+
     androidResources {
-        // The app is English-only; drops the AndroidX libraries' translations from resources.arsc.
-        localeFilters += "en"
         // OkHttp reads this only to parse cookies, and no client here has a CookieJar.
         ignoreAssetsPatterns += "!PublicSuffixDatabase.list"
     }
@@ -66,7 +67,7 @@ android {
     }
 
     // Needed to strip the dependencies' native libs; must be an installed NDK.
-    ndkVersion = "27.1.12297006"
+    ndkVersion = providers.gradleProperty("maid.ndkVersion").orElse("27.1.12297006").get()
 }
 
 kotlin {

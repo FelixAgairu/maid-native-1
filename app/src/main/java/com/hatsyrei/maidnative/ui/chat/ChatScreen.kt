@@ -1,5 +1,6 @@
 package com.hatsyrei.maidnative.ui.chat
 
+import com.hatsyrei.maidnative.ui.i18n.tr
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -208,9 +209,9 @@ fun ChatScreen(
         )
 
         is ChatDialog.Rename -> TextInputDialog(
-            title = "Rename conversation",
+            title = tr("Rename conversation"),
             initial = current.initial,
-            confirmLabel = "Rename",
+            confirmLabel = tr("Rename"),
             onDismiss = dismiss,
             onConfirm = { title ->
                 actions.renameChat(current.id, title)
@@ -219,21 +220,21 @@ fun ChatScreen(
         )
 
         is ChatDialog.SystemPrompt -> TextInputDialog(
-            title = "System prompt",
+            title = tr("System prompt"),
             initial = current.initial,
-            confirmLabel = "Save",
+            confirmLabel = tr("Save"),
             onDismiss = dismiss,
             onConfirm = { text ->
                 actions.setSystemPrompt(text)
                 dismiss()
             },
-            description = "Applies to this conversation, including messages already sent.",
+            description = tr("Applies to this conversation, including messages already sent."),
             multiline = true,
         )
 
         is ChatDialog.DeleteMessage -> ConfirmDialog(
-            title = "Delete message",
-            message = "Delete this message and everything below it? This can't be undone.",
+            title = tr("Delete message"),
+            message = tr("Delete this message and everything below it? This can't be undone."),
             onDismiss = dismiss,
             onConfirm = {
                 actions.deleteMessage(current.id)
@@ -242,8 +243,8 @@ fun ChatScreen(
         )
 
         is ChatDialog.DeleteChat -> ConfirmDialog(
-            title = "Delete conversation",
-            message = "Delete this conversation permanently? This can't be undone.",
+            title = tr("Delete conversation"),
+            message = tr("Delete this conversation permanently? This can't be undone."),
             onDismiss = dismiss,
             onConfirm = {
                 actions.deleteChat(current.id)
@@ -264,6 +265,16 @@ fun ChatScreen(
             ChatPropertiesDialog(
                 title = current.title,
                 stats = stats,
+                usage = remember(state.mappings, current.id) {
+                    com.hatsyrei.maidnative.domain.TokenUsageSummary.fromNodes(
+                        MessageTree.getConversation(state.mappings, current.id),
+                    )
+                },
+                allBranchesUsage = remember(state.mappings, current.id) {
+                    com.hatsyrei.maidnative.domain.TokenUsageSummary.fromNodes(
+                        state.mappings.values.filter { it.root == current.id },
+                    )
+                },
                 files = files,
                 onOpenFile = { viewingFile = it },
                 onUnlinkFile = { actions.unlinkFile(current.id, it) },
@@ -304,7 +315,7 @@ private fun ChatScaffold(
             CenterAlignedTopAppBar(
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
-                        Icon(Icons.Filled.Menu, contentDescription = "Conversations")
+                        Icon(Icons.Filled.Menu, contentDescription = tr("Conversations"))
                     }
                 },
                 title = {
@@ -313,6 +324,8 @@ private fun ChatScaffold(
                             models = state.models,
                             selected = state.settings.model,
                             onSelect = actions.selectModel,
+                            tags = state.settings.modelPickerTags,
+                            onTagsChange = actions.setModelPickerTags,
                         )
                     }
                 },
@@ -320,7 +333,7 @@ private fun ChatScaffold(
                     IconButton(onClick = actions.openSettings) {
                         Icon(
                             Icons.Filled.Settings,
-                            contentDescription = "Settings",
+                            contentDescription = tr("Settings"),
                             modifier = Modifier.size(18.dp),
                         )
                     }
@@ -438,6 +451,7 @@ private fun ChatScaffold(
                             assistantName = state.settings.assistantName,
                             userAvatar = userAvatar,
                             assistantAvatar = assistantAvatar,
+                            scrollLongMessages = state.settings.scrollLongMessages,
                             onRegenerate = { actions.regenerate(node.id) },
                             onDelete = { onDialog(ChatDialog.DeleteMessage(node.id)) },
                             onRequestEdit = { revise ->
@@ -497,6 +511,12 @@ private fun ChatScaffold(
                 onOpenAttachment = onOpenAttachment,
                 onSubmit = actions.submit,
                 onStop = actions.stop,
+                usage = { draft, compact ->
+                    ComposerUsage(state.mappings, state.root, state.streamingId, streaming,
+                        state.settings.baseURL, state.settings.model,
+                        state.contextWindows[state.settings.model], draft,
+                        state.pendingAttachments.isNotEmpty() || state.pendingFiles.isNotEmpty(), state.systemPrompt, compact)
+                },
             )
         }
     }

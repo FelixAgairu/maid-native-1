@@ -65,6 +65,7 @@ data class ChatUiState(
     val root: String? = null,
     val models: List<String> = emptyList(),
     val modalities: Map<String, Modalities> = emptyMap(),
+    val contextWindows: Map<String, Long?> = emptyMap(),
     val pendingAttachments: List<Attachment> = emptyList(),
     /** Linked on the next message; the grant is already held. */
     val pendingFiles: List<LinkedFile> = emptyList(),
@@ -124,6 +125,10 @@ data class ChatUiState(
 data class StreamingText(
     val id: String,
     val text: String = "",
+    val usage: com.hatsyrei.maidnative.domain.TokenUsageSummary? = null,
+    val contextUsage: com.hatsyrei.maidnative.domain.RequestUsage? = null,
+    val model: String = "",
+    val endpoint: String = "",
     val reasoning: String = "",
     val calls: ToolCalls = emptyMap(),
     /** Ids of the calls waiting for the user's approval. */
@@ -134,7 +139,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
 
     private val settingsRepo = SettingsRepository(app)
     private val client = OpenAiClient()
-    private val mcp = McpClient()
+    private val mcp = McpClient { _state.value.settings.trustUserCertificates }
     private val repo = MessageRepository(MaidDatabase.get(app).messageDao())
     private val fileStore = ConversationFileStore(app.contentResolver)
     private val nameplateStore = NameplateStore(app)
@@ -246,6 +251,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                 // Toggling HTTP re-opens or closes a cleartext endpoint, so it
                 // counts as a change for one; refreshModels then fetches or blocks.
                 val changedEndpoint = s.baseURL != prev.baseURL || s.apiKey != prev.apiKey ||
+                    s.trustUserCertificates != prev.trustUserCertificates ||
                     (s.allowCleartext != prev.allowCleartext && Endpoints.isCleartext(s.baseURL))
                 _state.update { it.copy(settings = s) }
                 // Fetch models once on launch, and again only when the endpoint
@@ -276,6 +282,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         if (_state.value.refreshingModels) return
         _state.update { it.copy(refreshingModels = true) }
         viewModelScope.launch {
+            var refreshAgain = false
             try {
                 val s = _state.value.settings
                 if (cleartextBlocked(s.baseURL)) {
@@ -283,13 +290,25 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                         it.copy(
                             models = emptyList(),
                             modalities = emptyMap(),
+                            contextWindows = emptyMap(),
                             error = if (silent) it.error else CLEARTEXT_BLOCKED,
                         )
                     }
                     return@launch
                 }
                 val result = withContext(Dispatchers.IO) {
-                    runCatching { client.listModels(OpenAiClient.Config(s.baseURL, s.apiKey, s.model)) }
+                    runCatching {
+                        client.listModels(OpenAiClient.Config(s.baseURL, s.apiKey, s.model,
+                            trustUserCertificates = s.trustUserCertificates))
+                    }
+                }
+                // A settings edit can finish while the old endpoint is still loading.
+                val now = _state.value.settings
+                if (s.baseURL != now.baseURL || s.apiKey != now.apiKey ||
+                    s.trustUserCertificates != now.trustUserCertificates || s.allowCleartext != now.allowCleartext
+                ) {
+                    refreshAgain = true
+                    return@launch
                 }
                 result.onSuccess { fetched ->
                     val ids = fetched.map { it.id }
@@ -298,6 +317,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                         state.copy(
                             models = ids,
                             modalities = fetched.associate { it.id to it.modalities },
+                            contextWindows = fetched.associate { it.id to it.contextWindow },
                             error = null,
                         )
                     }
@@ -312,12 +332,14 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                         it.copy(
                             models = emptyList(),
                             modalities = emptyMap(),
+                            contextWindows = emptyMap(),
                             error = if (silent) it.error else failure.message,
                         )
                     }
                 }
             } finally {
                 _state.update { it.copy(refreshingModels = false) }
+                if (refreshAgain) refreshModels(silent)
             }
         }
     }
@@ -357,6 +379,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { settingsRepo.setAllowCleartext(enabled) }
 
     fun setModel(value: String) = viewModelScope.launch { settingsRepo.setModel(value) }
+    fun setLanguage(value: String) = viewModelScope.launch { settingsRepo.setLanguage(value) }
+    fun setTrustUserCertificates(value: Boolean) =
+        viewModelScope.launch { settingsRepo.setTrustUserCertificates(value) }
+    fun setAutoRenameChats(value: Boolean) = viewModelScope.launch { settingsRepo.setAutoRenameChats(value) }
+    fun setModelPickerTags(value: Boolean) = viewModelScope.launch { settingsRepo.setModelPickerTags(value) }
+    fun setScrollLongMessages(value: Boolean) = viewModelScope.launch { settingsRepo.setScrollLongMessages(value) }
     fun setReasoning(enabled: Boolean) = viewModelScope.launch { settingsRepo.setReasoning(enabled) }
     fun setSampling(value: Sampling) = viewModelScope.launch { settingsRepo.setSampling(value) }
     fun setToolPolicies(policies: Map<String, ToolPolicy>) =
@@ -544,7 +572,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     /** Rename a conversation by updating its root node's title metadata. */
     fun renameChat(rootId: String, title: String) {
         val t = title.trim().ifEmpty { ConversationDefaults.CHAT_TITLE }
-        mutateTree { MessageTree.updateContent(it, rootId, { c -> c }, { m -> m + ("title" to t) }) }
+        mutateTree { MessageTree.updateContent(it, rootId, { c -> c }, { m ->
+            m + mapOf("title" to t, "titleSource" to "manual")
+        }) }
     }
 
     /** Delete an entire conversation (root + descendants). */
@@ -653,6 +683,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
             next = addSystemRoot(next, parent)
         }
         val rootId = existingRoot ?: parent
+
+        if (_state.value.settings.autoRenameChats) {
+            next = com.hatsyrei.maidnative.domain.ConversationTitles.apply(
+                next, rootId, prompt, pending.firstOrNull()?.name ?: files.firstOrNull()?.name,
+            )
+        }
 
         val userId = UUID.randomUUID().toString()
         next = MessageTree.addNode(
@@ -878,7 +914,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     private fun startStream(rootId: String, responseId: String) {
         val s = _state.value.settings
         _state.update { it.copy(busy = true, error = null, streamingId = responseId) }
-        _streaming.value = StreamingText(responseId)
+        _streaming.value = StreamingText(responseId, model = s.model, endpoint = s.baseURL)
         persist()
         val conversation = MessageTree.getConversation(_state.value.mappings, rootId)
         val servers = mcpServers.value
@@ -895,7 +931,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
             Mcp.asking(servers).forEach { (name, owner) -> put(name, AskTarget.Server(owner.first, owner.second)) }
         }
         stream.start(
-            config = OpenAiClient.Config(s.baseURL, s.apiKey, s.model, s.reasoning, s.sampling),
+            config = OpenAiClient.Config(s.baseURL, s.apiKey, s.model, s.reasoning, s.sampling,
+                trustUserCertificates = s.trustUserCertificates),
             conversation = conversation,
             tools = builtIns + Mcp.tools(servers, mcp) + fileTools,
             ask = askTargets.keys,
@@ -907,6 +944,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                     } else {
                         live.copy(
                             text = update.content ?: live.text,
+                            usage = update.usage,
+                            contextUsage = update.contextUsage,
                             reasoning = update.reasoning ?: live.reasoning,
                             calls = update.calls ?: live.calls,
                             awaiting = update.awaiting ?: live.awaiting,
@@ -963,16 +1002,26 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         val text = stream.committedText()
         val stats = stream.finalStats()
         val calls = stream.committedCalls()
-        val committed = if (id != null) {
+        var committed = if (id != null) {
             // The anchor the count is read against later: an edit moves the body
             // away from the length that was counted, and the comparison is all a
             // qualified figure needs.
             val counted = stats.copy(chars = text.length)
             MessageTree.updateContent(_state.value.mappings, id, { text }, metadata = {
-                counted.writeInto(ToolCallStore.writeInto(calls, it))
+                com.hatsyrei.maidnative.domain.TokenUsageStore.write(
+                    stream.requestUsage(), counted.writeInto(ToolCallStore.writeInto(calls, it)),
+                )
             })
         } else {
             _state.value.mappings
+        }
+        if (id != null && id in committed) {
+            // Follow the actual response's ancestors, even if another branch/chat is now selected.
+            val branch = generateSequence(committed[id]) { it.parent?.let(committed::get) }.toList().asReversed()
+            val live = _streaming.value
+            val signature = com.hatsyrei.maidnative.domain.ContextUsage.signature(branch, live?.endpoint.orEmpty(), live?.model.orEmpty())
+            val node = committed.getValue(id)
+            committed = committed + (id to node.copy(metadata = node.metadata + (com.hatsyrei.maidnative.domain.ContextUsage.SIGNATURE to signature)))
         }
         _state.update { it.copy(mappings = committed, busy = false, streamingId = null) }
         _streaming.value = null

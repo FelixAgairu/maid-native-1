@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicLong
  * MCP over Streamable HTTP: each JSON-RPC request is a POST, answered with
  * JSON or with an SSE stream that carries the response. Only tools are used.
  */
-class McpClient : McpCaller {
+class McpClient(private val trustUserCertificates: () -> Boolean = { false }) : McpCaller {
 
     private val http = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
@@ -39,6 +39,8 @@ class McpClient : McpCaller {
         .build()
 
     private class Session(val id: String?, val version: String)
+
+    private val certificates = CertificateClients(http)
 
     private class Reply(val result: JSONObject?, val sessionId: String?)
 
@@ -67,7 +69,7 @@ class McpClient : McpCaller {
         request(server.url, server.token, "tools/call", JSONObject().put("name", tool).put("arguments", arguments))
 
     private suspend fun request(url: String, token: String, method: String, params: JSONObject): JSONObject {
-        val key = "$url\n$token"
+        val key = "$url\n$token\n${trustUserCertificates()}"
         val session = session(key, url, token)
         val reply = try {
             post(url, token, session, message(method, params))
@@ -116,7 +118,7 @@ class McpClient : McpCaller {
             .build()
         val id = message.opt("id")?.toString()
         return suspendCancellableCoroutine { cont ->
-            val call = http.newCall(request)
+            val call = certificates.get(trustUserCertificates()).newCall(request)
             cont.invokeOnCancellation { call.cancel() }
             call.enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) = cont.resumeWith(Result.failure(e))

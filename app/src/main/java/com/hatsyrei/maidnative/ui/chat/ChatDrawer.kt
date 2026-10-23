@@ -1,5 +1,6 @@
 package com.hatsyrei.maidnative.ui.chat
 
+import com.hatsyrei.maidnative.ui.i18n.tr
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -157,13 +158,13 @@ internal fun DrawerContent(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "Chats",
+                        text = tr("Chats"),
                         style = MaterialTheme.typography.titleLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    DrawerActionChip("New chat", AddIcon, onClick = onNewChat)
+                    DrawerActionChip(tr("New chat"), AddIcon, onClick = onNewChat)
                     DrawerOverflowMenu(onImport = onImport, onBackupAll = onBackupAll)
                 }
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp))
@@ -174,7 +175,7 @@ internal fun DrawerContent(
                     if (roots.isEmpty()) {
                         item {
                             Text(
-                                text = "No chats yet",
+                                text = tr("No chats yet"),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(24.dp),
@@ -246,11 +247,11 @@ private fun DrawerOverflowMenu(onImport: () -> Unit, onBackupAll: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) {
-            Icon(Icons.Filled.MoreVert, contentDescription = "More chat actions")
+            Icon(Icons.Filled.MoreVert, contentDescription = tr("More chat actions"))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(
-                text = { Text("Import") },
+                text = { Text(tr("Import")) },
                 trailingIcon = {
                     Icon(
                         FolderOpenIcon,
@@ -265,7 +266,7 @@ private fun DrawerOverflowMenu(onImport: () -> Unit, onBackupAll: () -> Unit) {
                 },
             )
             DropdownMenuItem(
-                text = { Text("Export all") },
+                text = { Text(tr("Export all")) },
                 trailingIcon = {
                     Icon(
                         SaveAltIcon,
@@ -319,7 +320,7 @@ private fun DrawerChatItem(
                     .padding(horizontal = 20.dp, vertical = 14.dp),
             ) {
                 Text(
-                    text = title,
+                    text = if (title == ConversationDefaults.CHAT_TITLE) tr("New chat") else title,
                     maxLines = 1,
                     style = MaterialTheme.typography.labelLarge,
                     // Dim just the label while pressed as the long-press cue.
@@ -333,22 +334,22 @@ private fun DrawerChatItem(
             onDismiss = menu::close,
         ) {
             MenuOption(
-                text = "Rename",
+                text = tr("Rename"),
                 trailingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
                 onClick = { menu.close(); onRename() },
             )
             MenuOption(
-                text = "Export",
+                text = tr("Export"),
                 trailingIcon = { Icon(FileDownloadIcon, contentDescription = null) },
                 onClick = { menu.close(); onExport() },
             )
             MenuOption(
-                text = "Properties",
+                text = tr("Properties"),
                 trailingIcon = { Icon(InfoOutlineIcon, contentDescription = null) },
                 onClick = { menu.close(); onProperties() },
             )
             MenuOption(
-                text = "Delete",
+                text = tr("Delete"),
                 textColor = MaterialTheme.colorScheme.error,
                 trailingIcon = {
                     Icon(

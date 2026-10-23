@@ -1,5 +1,6 @@
 package com.hatsyrei.maidnative.ui.settings
 
+import com.hatsyrei.maidnative.ui.i18n.tr
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -135,7 +136,7 @@ private fun Swatch(
         if (selected) {
             Icon(
                 Icons.Filled.Check,
-                contentDescription = "Selected",
+                contentDescription = tr("Selected"),
                 tint = if (color.luminance() > 0.45f) Color.Black else Color.White,
                 modifier = Modifier.size(20.dp),
             )
@@ -159,7 +160,7 @@ private fun ColorPickerDialog(
 
     AppDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Accent colour") },
+        title = { Text(tr("Accent colour")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Box(
@@ -181,8 +182,8 @@ private fun ColorPickerDialog(
                 HueSlider(hue = hue, onChange = { hue = it })
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(color) }) { Text("Select") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = { onConfirm(color) }) { Text(tr("Select")) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Cancel")) } },
     )
 }
 

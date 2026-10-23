@@ -1,5 +1,6 @@
 package com.hatsyrei.maidnative.ui.settings
 
+import com.hatsyrei.maidnative.ui.i18n.tr
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -79,8 +80,8 @@ internal fun ScanButton(
                 strokeWidth = 2.dp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            succeeded -> Icon(Icons.Filled.Check, contentDescription = "Endpoint found")
-            else -> Icon(Icons.Filled.Search, contentDescription = "Scan for endpoint")
+            succeeded -> Icon(Icons.Filled.Check, contentDescription = tr("Endpoint found"))
+            else -> Icon(Icons.Filled.Search, contentDescription = tr("Scan for endpoint"))
         }
     }
 }
@@ -102,12 +103,11 @@ internal fun ScanOptionsDialog(
 
     AppDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Scan options") },
+        title = { Text(tr("Scan options")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    "The local subnet is probed on this port for an " +
-                        "OpenAI-compatible endpoint.",
+                    tr("The local subnet is probed on this port for an OpenAI-compatible endpoint."),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -121,7 +121,7 @@ internal fun ScanOptionsDialog(
                     OutlinedTextField(
                         state = portText,
                         inputTransformation = PORT_INPUT,
-                        label = { Text("Port") },
+                        label = { Text(tr("Port")) },
                         lineLimits = TextFieldLineLimits.SingleLine,
                         isError = !portValid,
                         keyboardOptions = KeyboardOptions(
@@ -129,7 +129,7 @@ internal fun ScanOptionsDialog(
                             imeAction = ImeAction.Done,
                         ),
                         supportingText = {
-                            Text(if (portValid) "" else "Enter a port between 1 and 65535")
+                            Text(if (portValid) "" else tr("Enter a port between 1 and 65535"))
                         },
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -154,7 +154,7 @@ internal fun ScanOptionsDialog(
                 }
 
                 Text(
-                    "Subnet",
+                    tr("Subnet"),
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(top = 4.dp),
                 )
@@ -179,7 +179,7 @@ internal fun ScanOptionsDialog(
                     }
                 }
                 Text(
-                    "${hostCount(prefix)} addresses probed",
+                    tr("{0} addresses probed" , hostCount(prefix)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -190,11 +190,11 @@ internal fun ScanOptionsDialog(
                 onClick = { onConfirm(parsedPort ?: EndpointScanner.DEFAULT_PORT, prefix) },
                 enabled = portValid,
             ) {
-                Text("Scan")
+                Text(tr("Scan"))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(tr("Cancel")) }
         },
     )
 }

@@ -1,5 +1,6 @@
 package com.hatsyrei.maidnative.ui.settings
 
+import com.hatsyrei.maidnative.ui.i18n.tr
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.selection.toggleable
@@ -125,8 +126,8 @@ internal fun McpDialog(
         // Over the editor, so backing out of it keeps what was typed.
         if (deleting) {
             ConfirmDialog(
-                title = "Delete server",
-                message = "\"${server.name}\" and its stored token will be removed from this device.",
+                title = tr("Delete server"),
+                message = tr("\"{0}\" and its stored token will be removed from this device." , server.name),
                 onDismiss = { deleting = false },
                 onConfirm = {
                     write(saved.filterNot { it.id == server.id })
@@ -146,7 +147,7 @@ internal fun McpDialog(
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (saved.isEmpty()) {
                     Text(
-                        "Add tools from Model Context Protocol servers that speak Streamable HTTP.",
+                        tr("Add tools from Model Context Protocol servers that speak Streamable HTTP."),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -164,7 +165,7 @@ internal fun McpDialog(
                     contentPadding = ButtonDefaults.TextButtonWithIconContentPadding,
                 ) {
                     Icon(AddIcon, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                    Text("Add server", modifier = Modifier.padding(start = ButtonDefaults.IconSpacing))
+                    Text(tr("Add server"), modifier = Modifier.padding(start = ButtonDefaults.IconSpacing))
                 }
             }
         },
@@ -177,11 +178,11 @@ internal fun McpDialog(
                     onDismiss()
                 },
             ) {
-                Text("Save")
+                Text(tr("Save"))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(tr("Cancel")) }
         },
     )
 }
@@ -210,7 +211,7 @@ private fun ServerRow(server: McpServer, enabled: Boolean, onToggle: (Boolean) -
                 if (server.tokenReadable) {
                     "$on of ${server.tools.size} tools"
                 } else {
-                    "Token can't be decrypted — enter it again"
+                    tr("Token can't be decrypted — enter it again")
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = if (server.tokenReadable) colors.onSurfaceVariant else colors.error,
@@ -288,7 +289,7 @@ private fun McpServerDialog(
 
     AppDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (isNew) "Add MCP server" else "Edit MCP server") },
+        title = { Text(if (isNew) tr("Add MCP server") else tr("Edit MCP server")) },
         text = {
             // The dialog's own window; the caller's focus manager can't clear focus in here.
             val focusManager = LocalFocusManager.current
@@ -299,14 +300,14 @@ private fun McpServerDialog(
             ) {
                 OutlinedTextField(
                     state = name,
-                    label = { Text("Name") },
+                    label = { Text(tr("Name")) },
                     lineLimits = TextFieldLineLimits.SingleLine,
                     isError = nameTaken,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     supportingText = when {
-                        nameTaken -> "Another server has this name"
+                        nameTaken -> tr("Another server has this name")
                         newName.isEmpty() -> null
-                        else -> "Tools are prefixed with ${prefix}__"
+                        else -> tr("Tools are prefixed with {0}__" , prefix)
                     }?.let { hint -> { Text(hint) } },
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -323,9 +324,9 @@ private fun McpServerDialog(
                         imeAction = ImeAction.Next,
                     ),
                     supportingText = when {
-                        newUrl.isNotEmpty() && parsedUrl == null -> "Enter an http or https URL"
+                        newUrl.isNotEmpty() && parsedUrl == null -> tr("Enter an http or https URL")
                         parsedUrl != null && !parsedUrl.isHttps && !isLoopback(parsedUrl.host) ->
-                            "Unencrypted: trusted networks only"
+                            tr("Unencrypted: trusted networks only")
                         else -> null
                     }?.let { hint -> { Text(hint) } },
                     modifier = Modifier
@@ -334,14 +335,14 @@ private fun McpServerDialog(
                 )
                 OutlinedSecureTextField(
                     state = token,
-                    label = { Text("Bearer token (optional)") },
+                    label = { Text(tr("Bearer token (optional)")) },
                     textObfuscationMode = TextObfuscationMode.Hidden,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                     onKeyboardAction = { focusManager.clearFocus() },
                     supportingText = if (server.tokenReadable) {
                         null
                     } else {
-                        { Text("The saved token can't be decrypted. Enter it again.") }
+                        { Text(tr("The saved token can't be decrypted. Enter it again.")) }
                     },
                     isError = !server.tokenReadable && newToken.isEmpty(),
                     modifier = Modifier
@@ -361,7 +362,7 @@ private fun McpServerDialog(
                         },
                         enabled = parsedUrl != null && !loading,
                     ) {
-                        Text(if (listedFor == null) "Connect" else "Refresh tools")
+                        Text(if (listedFor == null) tr("Connect") else tr("Refresh tools"))
                     }
                     if (loading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                 }
@@ -369,7 +370,7 @@ private fun McpServerDialog(
 
                 if (listedFor != null) {
                     Text(
-                        if (tools.isEmpty()) "The server lists no tools." else "Tools",
+                        if (tools.isEmpty()) tr("The server lists no tools.") else tr("Tools"),
                         style = if (tools.isEmpty()) MaterialTheme.typography.bodySmall else MaterialTheme.typography.titleSmall,
                         color = if (tools.isEmpty()) colors.onSurfaceVariant else colors.onSurface,
                         modifier = Modifier.padding(top = 8.dp),
@@ -387,9 +388,9 @@ private fun McpServerDialog(
                                     },
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("Trust this server", style = MaterialTheme.typography.bodyLarge)
+                                    Text(tr("Trust this server"), style = MaterialTheme.typography.bodyLarge)
                                     Text(
-                                        "Run tools without asking.",
+                                        tr("Run tools without asking."),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = colors.onSurfaceVariant,
                                     )
@@ -438,16 +439,16 @@ private fun McpServerDialog(
                 },
                 enabled = newName.isNotEmpty() && !nameTaken && parsedUrl != null && listed && !loading,
             ) {
-                Text("Save")
+                Text(tr("Save"))
             }
         },
         neutralButton = if (isNew) {
             null
         } else {
-            { TextButton(onClick = onDelete) { Text("Delete", color = colors.error) } }
+            { TextButton(onClick = onDelete) { Text(tr("Delete"), color = colors.error) } }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(tr("Cancel")) }
         },
     )
 }

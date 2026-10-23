@@ -103,6 +103,7 @@ private fun MaidNativeApp(viewModel: ChatViewModel) {
             deleteChat = viewModel::deleteChat,
             setSystemPrompt = viewModel::setSystemPrompt,
             selectModel = viewModel::setModel,
+            setModelPickerTags = viewModel::setModelPickerTags,
             exportFileName = viewModel::exportFileName,
             exportConversation = viewModel::exportConversation,
             importConversations = viewModel::importConversations,
@@ -112,9 +113,14 @@ private fun MaidNativeApp(viewModel: ChatViewModel) {
     }
     val settingsActions = remember(viewModel) {
         SettingsActions(
+            setLanguage = viewModel::setLanguage,
             setBaseURL = viewModel::setBaseURL,
             setApiKey = viewModel::setApiKey,
             setAllowCleartext = viewModel::setAllowCleartext,
+            setTrustUserCertificates = viewModel::setTrustUserCertificates,
+            setAutoRenameChats = viewModel::setAutoRenameChats,
+            setModelPickerTags = viewModel::setModelPickerTags,
+            setScrollLongMessages = viewModel::setScrollLongMessages,
             setModel = viewModel::setModel,
             refreshModels = viewModel::refreshModels,
             setReasoning = viewModel::setReasoning,
@@ -146,39 +152,41 @@ private fun MaidNativeApp(viewModel: ChatViewModel) {
     // `SaveableStateHolder` per screen keeps that state across the swap.
     val screenState = rememberSaveableStateHolder()
 
-    AnimatedContent(
-        targetState = screen,
-        transitionSpec = {
-            // Settings slides in from the right; going back slides it away to the
-            // right while the chat eases back in from a slight left offset.
-            if (targetState == Screen.Settings) {
-                (slideInHorizontally { it } + fadeIn()) togetherWith
-                    (slideOutHorizontally { -it / 5 } + fadeOut())
-            } else {
-                (slideInHorizontally { -it / 5 } + fadeIn()) togetherWith
-                    (slideOutHorizontally { it } + fadeOut())
-            }
-        },
-        label = "screen",
-    ) { target ->
-        // Keyed by name rather than the enum itself: the holder's saved map is
-        // written into the activity's Bundle, so its keys must be types the
-        // Bundle can store.
-        screenState.SaveableStateProvider(target.name) {
-            when (target) {
-                Screen.Chat -> ChatScreen(state = state, streaming = streaming, actions = chatActions)
+    com.hatsyrei.maidnative.ui.i18n.AppLanguage(state.settings.language) {
+        AnimatedContent(
+            targetState = screen,
+            transitionSpec = {
+                // Settings slides in from the right; going back slides it away to the
+                // right while the chat eases back in from a slight left offset.
+                if (targetState == Screen.Settings) {
+                    (slideInHorizontally { it } + fadeIn()) togetherWith
+                        (slideOutHorizontally { -it / 5 } + fadeOut())
+                } else {
+                    (slideInHorizontally { -it / 5 } + fadeIn()) togetherWith
+                        (slideOutHorizontally { it } + fadeOut())
+                }
+            },
+            label = "screen",
+        ) { target ->
+            // Keyed by name rather than the enum itself: the holder's saved map is
+            // written into the activity's Bundle, so its keys must be types the
+            // Bundle can store.
+            screenState.SaveableStateProvider(target.name) {
+                when (target) {
+                    Screen.Chat -> ChatScreen(state = state, streaming = streaming, actions = chatActions)
 
-                Screen.Settings -> {
-                    BackHandler { screen = Screen.Chat }
-                    val presets by viewModel.presets.collectAsStateWithLifecycle()
-                    val mcpServers by viewModel.mcpServers.collectAsStateWithLifecycle()
-                    SettingsScreen(
-                        state = state,
-                        presets = presets,
-                        mcpServers = mcpServers,
-                        actions = settingsActions,
-                        onBack = { screen = Screen.Chat },
-                    )
+                    Screen.Settings -> {
+                        BackHandler { screen = Screen.Chat }
+                        val presets by viewModel.presets.collectAsStateWithLifecycle()
+                        val mcpServers by viewModel.mcpServers.collectAsStateWithLifecycle()
+                        SettingsScreen(
+                            state = state,
+                            presets = presets,
+                            mcpServers = mcpServers,
+                            actions = settingsActions,
+                            onBack = { screen = Screen.Chat },
+                        )
+                    }
                 }
             }
         }

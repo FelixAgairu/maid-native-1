@@ -4,6 +4,8 @@ import android.os.SystemClock
 import com.hatsyrei.maidnative.data.remote.OpenAiClient
 import com.hatsyrei.maidnative.domain.Reasoning
 import com.hatsyrei.maidnative.domain.TurnStats
+import com.hatsyrei.maidnative.domain.UsageLedger
+import com.hatsyrei.maidnative.domain.TokenUsageSummary
 import com.hatsyrei.maidnative.domain.tools.Tool
 import com.hatsyrei.maidnative.domain.tools.ToolCall
 import com.hatsyrei.maidnative.domain.tools.ToolCalls
@@ -32,6 +34,8 @@ internal class StreamUpdate(
     val calls: ToolCalls?,
     /** Ids of the calls waiting for the user's approval. */
     val awaiting: Set<String>?,
+    val usage: TokenUsageSummary,
+    val contextUsage: com.hatsyrei.maidnative.domain.RequestUsage?,
 )
 
 /**
@@ -88,6 +92,9 @@ internal class StreamController(
     // NTP correction or the user changing the clock mid-reply cannot produce a
     // negative duration.
     private var usage = TurnStats()
+    private val usageLedger = UsageLedger()
+    private var usageVersion = 0
+    private var publishedUsageVersion = 0
     private var promptChars = 0
     private var startedAt = 0L
     private var firstTokenAt = 0L
@@ -144,6 +151,9 @@ internal class StreamController(
             var failure: Throwable? = null
             while (true) {
                 val (offered, pendingText, pendingCalls) = synchronized(lock) {
+                    usage = TurnStats()
+                    usageLedger.begin()
+                    usageVersion++
                     // The stats describe the request that produced the answer.
                     startedAt = SystemClock.elapsedRealtime()
                     firstTokenAt = 0L
@@ -172,6 +182,12 @@ internal class StreamController(
                             if (accept(chunk, gen)) pending.trySend(Unit)
                         }
                     caught
+                }
+                synchronized(lock) {
+                    if (gen == generation) {
+                        usageLedger.finish(failure == null)
+                        usageVersion++
+                    }
                 }
                 if (failure != null) break
 
@@ -283,6 +299,9 @@ internal class StreamController(
         deltas.clear()
         reasoningBreak = false
         usage = TurnStats()
+        usageLedger.reset()
+        usageVersion = 0
+        publishedUsageVersion = 0
         promptChars = 0
         startedAt = 0L
         firstTokenAt = 0L
@@ -294,7 +313,16 @@ internal class StreamController(
     private fun accept(event: OpenAiClient.StreamEvent, gen: Int): Boolean = synchronized(lock) {
         if (gen != generation) return false
         when (event) {
-            is OpenAiClient.StreamEvent.Usage -> usage = event.stats
+            is OpenAiClient.StreamEvent.Usage -> {
+                usage = event.stats.copy(
+                    promptTokens = event.stats.promptTokens ?: usage.promptTokens,
+                    completionTokens = event.stats.completionTokens ?: usage.completionTokens,
+                    genMs = event.stats.genMs ?: usage.genMs,
+                    genTokens = event.stats.genTokens ?: usage.genTokens,
+                )
+                usageLedger.accept(event.stats)
+                usageVersion++
+            }
             is OpenAiClient.StreamEvent.Text -> {
                 val now = SystemClock.elapsedRealtime()
                 if (firstTokenAt == 0L) firstTokenAt = now
@@ -340,16 +368,20 @@ internal class StreamController(
         val reasoningChanged = reasoning.length != publishedReasoning
         val callsChanged = callsVersion != publishedCallsVersion
         val gatesChanged = gatesVersion != publishedGatesVersion
-        if (!contentChanged && !reasoningChanged && !callsChanged && !gatesChanged) return null
+        val usageChanged = usageVersion != publishedUsageVersion
+        if (!contentChanged && !reasoningChanged && !callsChanged && !gatesChanged && !usageChanged) return null
         publishedContent = content.length
         publishedReasoning = reasoning.length
         publishedCallsVersion = callsVersion
         publishedGatesVersion = gatesVersion
+        publishedUsageVersion = usageVersion
         return StreamUpdate(
             content = if (contentChanged) content.toString() else null,
             reasoning = if (reasoningChanged) reasoning.toString() else null,
             calls = if (callsChanged) calls.toMap() else null,
             awaiting = if (gatesChanged) gates.filterValues { !it.isCompleted }.keys.toSet() else null,
+            usage = TokenUsageSummary.of(usageLedger.snapshot()),
+            contextUsage = usageLedger.snapshot().lastOrNull(),
         )
     }
 
@@ -407,6 +439,8 @@ internal class StreamController(
             ttftMs = if (startedAt == 0L) null else firstTokenAt - startedAt,
         )
     }
+
+    fun requestUsage() = synchronized(lock) { usageLedger.snapshot() }
 
     private class PendingCall {
         var id = ""
