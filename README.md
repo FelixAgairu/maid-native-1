@@ -1,39 +1,10 @@
-<div align="center">
+<div align="center"><img src="Logo.svg" width="128" height="128" alt="Maid Native Logo" /></div>
 
-<img src="Logo.svg" width="128" height="128" alt="Maid Native Logo" />
-
-# Maid Native
+# Maid Native 1
 
 A lightweight, Material 3 themed native Android client for OpenAI-compatible
 endpoints. No account, no telemetry, no ads — just a small APK and your own
-server.
-
-[![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com)
-[![Kotlin](https://img.shields.io/badge/kotlin-%237F52FF.svg?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org)
-[![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)](https://developer.android.com/compose)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
-[![Latest Release](https://img.shields.io/github/v/release/HatsyRei/maid-native?style=for-the-badge&color=orange)](https://github.com/HatsyRei/maid-native/releases)
-
-<table align="center">
-<tr>
-<td width="25%"><a href="docs/screenshots/chat-multimodal.png"><img src="docs/screenshots/chat-multimodal.png" width="100%" alt="Chat with an image attachment, a Markdown reply and its generation-stats footnote" /></a></td>
-<td width="25%"><a href="docs/screenshots/drawer.png"><img src="docs/screenshots/drawer.png" width="100%" alt="Chat drawer with saved conversations, a New chat action and an overflow menu" /></a></td>
-<td width="25%"><a href="docs/screenshots/settings-endpoint.png"><img src="docs/screenshots/settings-endpoint.png" width="100%" alt="Endpoint, model, sampling and thinking settings" /></a></td>
-<td width="25%"><a href="docs/screenshots/settings-theme.png"><img src="docs/screenshots/settings-theme.png" width="100%" alt="Theme accent, composer background and profile settings" /></a></td>
-</tr>
-<tr>
-<td align="center"><sub><b>Multimodal chat</b></sub></td>
-<td align="center"><sub><b>Chat drawer</b></sub></td>
-<td align="center"><sub><b>Endpoint &amp; model</b></sub></td>
-<td align="center"><sub><b>Personalisation</b></sub></td>
-</tr>
-</table>
-
-<sub>Click any screenshot to view it full size.</sub>
-
-</div>
-
----
+server
 
 ## Features
 
@@ -132,11 +103,6 @@ and behaviour it mirrors goes to:
 - [HatsyRei/maid](https://github.com/HatsyRei/maid) — the React Native fork this
   port was made from, and the parity reference used throughout.
 
-See [SPEC.md](SPEC.md) for the full port specification and the record of the
-migration (now closed — milestones M0–M5 complete). This repo is a self-contained
-Gradle project, split out from the RN `maid` repo so the native port can evolve
-independently.
-
 ## Prerequisites
 
 - Android SDK (`ANDROID_HOME` set, or a `local.properties` with `sdk.dir=...`).
@@ -192,16 +158,7 @@ sdk.dir=/home/<you>/android-sdk
 > release key (path + credentials loaded from a git-ignored `keystore.properties`)
 > would be a prerequisite for distribution.
 
-## Status
-
-**Port complete.** Behavioural parity with the React Native app has been reached
-and signed off on-device (SPEC §7): streaming chat against an OpenAI-compatible
-endpoint, conversation-tree logic (with unit tests), Room persistence, settings,
-a chat UI with message controls + branch navigation, a navigation drawer, and
-Markdown rendering (incremental while streaming). Signed release APK is ~2.0 MB,
-against ~20 MB for the React Native build. Remaining items are post-parity
-enhancements, listed in [SPEC.md](SPEC.md) §7.1.
-
 ## License
 
-[MIT](LICENSE) © 2026 HatsyRei.
+[MIT(HatsyRei)](LICENSE-OLD) © 2026 HatsyRei.
+[MPL](LICENSE)
