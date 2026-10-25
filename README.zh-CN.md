@@ -132,7 +132,7 @@ Maid Native 1 基于以下项目构建：
 
 - [Mobile-Artificial-Intelligence/maid](https://github.com/Mobile-Artificial-Intelligence/maid)
 - [HatsyRei/maid-native](https://github.com/HatsyRei/maid-native)
-- [billertwerson-gif](https://github.com/billertwerson-gif)
+- [billertwerson-gif/maid-native](https://github.com/billertwerson-gif/maid-native)
 
 请参阅随附的许可文件，了解适用的许可条款及署名要求。
 
