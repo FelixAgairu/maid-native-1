@@ -158,7 +158,10 @@ sdk.dir=/home/<you>/android-sdk
 > release key (path + credentials loaded from a git-ignored `keystore.properties`)
 > would be a prerequisite for distribution.
 
+## Original
+
+[Maid Native](https://github.com/HatsyRei/maid-native)
+
 ## License
 
-[MIT(HatsyRei)](LICENSE-OLD) © 2026 HatsyRei.
-[MPL](LICENSE)
+[MIT(Maid Native@HatsyRei)](LICENSE-OLD) © 2026 [HatsyRei](https://github.com/HatsyRei). | [MPL](LICENSE) FelixAgairu
