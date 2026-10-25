@@ -160,8 +160,16 @@ sdk.dir=/home/<you>/android-sdk
 
 ## Original
 
-[Maid Native](https://github.com/HatsyRei/maid-native)
+[Maid Native](https://github.com/HatsyRei/maid-native) @HatsyRei
+- Original Maid Native.
+
+[Maid Native](https://github.com/billertwerson-gif/maid-native) fork @billertwerson-gif
+- Maid Native with many patch.
 
 ## License
 
-[MIT(Maid Native@HatsyRei)](LICENSE-OLD) © 2026 [HatsyRei](https://github.com/HatsyRei). | [MPL](LICENSE) FelixAgairu
+[MIT](LICENSE.MIT.HatsyRei)(Maid Native @HatsyRei) © 2026 [HatsyRei](https://github.com/HatsyRei).
+
+[MIT](LICENSE.MIT.billertwerson-gif)(Maid Native @billertwerson-gif) © 2026 [billertwerson-gif](https://github.com/billertwerson-gif).
+
+[MPL](LICENSE) FelixAgairu
