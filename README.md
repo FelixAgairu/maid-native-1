@@ -134,7 +134,7 @@ Maid Native 1 builds on work from:
 
 - [Mobile-Artificial-Intelligence/maid](https://github.com/Mobile-Artificial-Intelligence/maid)
 - [HatsyRei/maid-native](https://github.com/HatsyRei/maid-native)
-- [billertwerson-gif](https://github.com/billertwerson-gif)
+- [billertwerson-gif/maid-native](https://github.com/billertwerson-gif/maid-native)
 
 See the accompanying license files for the applicable licensing terms and attribution requirements.
 
