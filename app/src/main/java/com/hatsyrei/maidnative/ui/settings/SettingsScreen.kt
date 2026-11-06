@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2026 Felix Agairu
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the License was not distributed with this file, You can obtain one at
+ * https://mozilla.org/MPL/2.0/.
+ */
+
 package com.hatsyrei.maidnative.ui.settings
 
 import com.hatsyrei.maidnative.ui.i18n.tr
@@ -16,9 +24,13 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.KeyboardActionHandler
 import androidx.compose.foundation.text.input.TextFieldLineLimits
@@ -32,6 +44,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +53,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -87,6 +101,10 @@ fun SettingsScreen(
     var savingNew by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<EndpointPreset?>(null) }
     val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
+    val pickCert = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let { actions.setCustomCertificatePath(uri.toString()) }
+    }
 
     // Reset the scan button to its idle state each time Settings is opened.
     LaunchedEffect(Unit) { actions.resetScan() }
@@ -102,6 +120,7 @@ fun SettingsScreen(
                 },
             )
         },
+        containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Column(
             modifier = Modifier
@@ -120,109 +139,21 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            LanguageSection(state.settings.language, actions.setLanguage)
-            Row(
+            // 1. CONNECTION & API SETTINGS
+            Text(tr("Endpoint"), style = MaterialTheme.typography.titleMedium)
+            TextButton(
+                onClick = {
+                    val intent = android.content.Intent(context, com.hatsyrei.maidnative.EndpointSettingsActivity::class.java)
+                    context.startActivity(intent)
+                },
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(tr("Endpoint"), style = MaterialTheme.typography.titleMedium)
-                // Matches the scan button's width so the two icons share a centre line.
-                IconButton(
-                    onClick = {
-                        // Buttons don't take focus on touch, so commit by hand or
-                        // the sheet would save the last committed value.
-                        focusManager.clearFocus()
-                        showPresets = true
-                    },
-                    modifier = Modifier.size(56.dp),
-                ) {
-                    Icon(BookmarksIcon, contentDescription = tr("Saved endpoints"))
-                }
+                Text(tr("Configure endpoint"))
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                AutoSaveTextField(
-                    state = baseURL,
-                    committed = state.settings.baseURL,
-                    label = tr("Base URL"),
-                    onCommit = actions.setBaseURL,
-                    modifier = Modifier.weight(1f),
-                    // A URL is not prose: autocorrect, suggestions and sentence
-                    // capitalisation only ever corrupt what the user typed.
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Uri,
-                        autoCorrectEnabled = false,
-                        capitalization = KeyboardCapitalization.None,
-                        imeAction = ImeAction.Done,
-                    ),
-                )
-                val scanSucceeded = state.foundURL != null && state.settings.baseURL == state.foundURL
-                ScanButton(
-                    scanning = state.scanning,
-                    succeeded = scanSucceeded,
-                    onScan = {
-                        focusManager.clearFocus()
-                        showScanOptions = true
-                    },
-                )
-            }
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp))
 
-            AutoSaveTextField(
-                state = apiKey,
-                committed = state.settings.apiKey,
-                label = tr("API key (optional for local endpoints)"),
-                onCommit = actions.setApiKey,
-                modifier = Modifier.fillMaxWidth(),
-                secure = true,
-            )
-
-            // The key is bound to the endpoint it was entered for and is never
-            // sent anywhere else, so both of these want fixing where it is typed.
-            if (state.settings.apiKeyUnreadable) {
-                Text(
-                    tr("The stored API key can no longer be decrypted on this device. Enter it again to replace it."),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            state.credentialNotice?.let {
-                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(tr("Allow HTTP endpoints"), style = MaterialTheme.typography.bodyLarge)
-                    Text(
-                        tr("Unencrypted HTTP. Only enable on trusted networks. Local servers may need this."),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
-                    checked = state.settings.allowCleartext,
-                    onCheckedChange = actions.setAllowCleartext,
-                )
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            PreferenceSwitch(
-                title = tr("Trust user-installed certificates"),
-                description = tr("Off: system certificates only. On: system and user-installed CA certificates for API and MCP connections. Hostname and certificate checks remain enabled. Restart the app after installing or removing a CA."),
-                checked = state.settings.trustUserCertificates,
-                enabled = !state.busy,
-                onChange = actions.setTrustUserCertificates,
-            )
-
+            // 2. MODEL & GENERATION SETTINGS
             Text(tr("Model"), style = MaterialTheme.typography.titleMedium)
             state.error?.let {
                 Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
@@ -306,22 +237,60 @@ fun SettingsScreen(
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp))
 
-            ThemeSection(
-                accentColor = state.settings.accentColor,
-                nameplate = state.settings.nameplate,
-                actions = actions,
-            )
-
-            Spacer(Modifier.height(8.dp))
-
+            // 3. CHAT EXPERIENCE SETTINGS
             PreferenceSwitch(
                 title = tr("Automatically name new chats"),
                 description = tr("Uses the first message locally; keeps manually chosen titles and uses no extra tokens."),
                 checked = state.settings.autoRenameChats,
                 onChange = actions.setAutoRenameChats,
             )
+
+            PreferenceSwitch(
+                title = tr("Scroll long messages"),
+                description = tr("Long messages and reasoning scroll inside their cards. Expand any card to read it in full."),
+                checked = state.settings.scrollLongMessages,
+                onChange = actions.setScrollLongMessages,
+            )
+
+            PreferenceSwitch(
+                title = tr("Always show scrollbar"),
+                description = tr("Show scrollbar even when not scrolling."),
+                checked = state.settings.alwaysShowScrollbar,
+                onChange = actions.setAlwaysShowScrollbar,
+            )
+
+            PreferenceSwitch(
+                title = tr("Auto-collapse messages"),
+                description = tr("Automatically collapse long messages to show only first two lines."),
+                checked = state.settings.collapseMessages,
+                onChange = actions.setCollapseMessages,
+            )
+
+            ChatSection(
+                userName = state.settings.userName,
+                assistantName = state.settings.assistantName,
+                userAvatar = state.settings.userAvatar,
+                assistantAvatar = state.settings.assistantAvatar,
+                exportMedia = state.settings.exportMedia,
+                actions = actions,
+            )
+
+            // 4. APPEARANCE & PERSONALIZATION
+            LanguageSection(state.settings.language, actions.setLanguage)
+
+            Spacer(Modifier.height(8.dp))
+
+            ThemeSection(
+                accentColor = state.settings.accentColor,
+                backgroundColor = state.settings.backgroundColor,
+                fontScale = state.settings.fontScale,
+                nameplate = state.settings.nameplate,
+                actions = actions,
+            )
+
+            // 5. INFORMATION & STATUS
             val totalUsage = remember(state.mappings) {
                 com.hatsyrei.maidnative.domain.TokenUsageSummary.fromNodes(state.mappings.values)
             }
@@ -331,20 +300,13 @@ fun SettingsScreen(
             Text(tr("All saved chats and branches; deleted replies are excluded. Only server-reported usage is counted. Open a chat's Properties for details."),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            PreferenceSwitch(
-                title = tr("Scroll long messages"),
-                description = tr("Long messages and reasoning scroll inside their cards. Expand any card to read it in full."),
-                checked = state.settings.scrollLongMessages,
-                onChange = actions.setScrollLongMessages,
-            )
-            ChatSection(
-                userName = state.settings.userName,
-                assistantName = state.settings.assistantName,
-                userAvatar = state.settings.userAvatar,
-                assistantAvatar = state.settings.assistantAvatar,
-                exportMedia = state.settings.exportMedia,
-                actions = actions,
-            )
+
+            TextButton(
+                onClick = actions.clearTokenUsageHistory,
+                enabled = !state.busy,
+            ) {
+                Text(tr("Clear token usage history"))
+            }
         }
     }
 

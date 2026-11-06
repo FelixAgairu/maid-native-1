@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2026 Felix Agairu
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the License was not distributed with this file, You can obtain one at
+ * https://mozilla.org/MPL/2.0/.
+ */
+
 package com.hatsyrei.maidnative.ui.chat
 
 import com.hatsyrei.maidnative.ui.i18n.tr
@@ -52,6 +60,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -151,6 +160,9 @@ internal fun Composer(
     onStop: () -> Unit,
     usage: @Composable (String, Boolean) -> Unit = { _, _ -> },
     nameplate: Painter? = LocalNameplate.current,
+    showReasoningToggle: Boolean = false,
+    reasoningEnabled: Boolean = true,
+    onReasoningChange: ((Boolean) -> Unit)? = null,
 ) {
     val input = rememberTextFieldState()
     val text = input.text
@@ -206,6 +218,32 @@ internal fun Composer(
                 .fillMaxWidth()
                 .padding(horizontal = 6.dp, vertical = if (compact) 0.dp else 6.dp),
         ) {
+            if (showReasoningToggle && onReasoningChange != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 6.dp, end = 6.dp, bottom = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Reasoning",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = "Enable model reasoning traces",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = reasoningEnabled,
+                        onCheckedChange = onReasoningChange,
+                    )
+                }
+            }
             if (hasChips) {
                 AttachmentChips(
                     attachments = attachments,

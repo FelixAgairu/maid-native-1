@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2026 Felix Agairu
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the License was not distributed with this file, You can obtain one at
+ * https://mozilla.org/MPL/2.0/.
+ */
+
 package com.hatsyrei.maidnative.ui.chat
 
 import com.hatsyrei.maidnative.ui.i18n.tr
@@ -58,6 +66,7 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hatsyrei.maidnative.domain.Attachment
@@ -175,6 +184,7 @@ internal fun MessageItem(
     userAvatar: Painter?,
     assistantAvatar: Painter?,
     scrollLongMessages: Boolean,
+    collapseMessages: Boolean = false,
     onRegenerate: () -> Unit,
     onDelete: () -> Unit,
     onRequestEdit: (revise: Boolean) -> Unit,
@@ -186,6 +196,7 @@ internal fun MessageItem(
     onApproveTools: (ids: List<String>, allow: Boolean, always: Boolean) -> Unit,
     streamingState: StreamingMarkdownState? = null,
     streaming: State<StreamingText?>? = null,
+    accentColor: Int = 0,
 ) {
     val isUser = node.role == "user"
     // Read here, so a token recomposes this bubble and nothing above it.
@@ -210,12 +221,23 @@ internal fun MessageItem(
     val menu = rememberTapMenu(remember(node.id) { "message:${node.id}" })
     val closeMenu = menu::close
     var reasoningExpanded by remember(node.id) { mutableStateOf(false) }
+    // Per-message fold/unfold state for auto-collapsed bubbles.
+    var manuallyExpanded by remember(node.id) { mutableStateOf(false) }
+    val isCollapsed = collapseMessages && !manuallyExpanded
 
     MessageCard(
         pressed = menu.pressed,
         gestures = Modifier.tapMenuGestures(menu),
     ) {
-        Box {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    if (isUser && accentColor != 0) Color(accentColor).copy(alpha = 0.15f)
+                    else if (isUser) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                    else Color.Transparent
+                )
+        ) {
             TapContextMenu(
                 expanded = menu.expanded,
                 touchOffset = menu.touchOffset,
@@ -281,6 +303,19 @@ internal fun MessageItem(
                 else { if (assistantName == "Assistant") tr("Assistant") else assistantName },
             avatar = if (isUser) userAvatar else assistantAvatar,
             controls = {
+                // Fold/unfold toggle for auto-collapsed bubbles.
+                if (collapseMessages) {
+                    IconButton(
+                        onClick = { manuallyExpanded = !manuallyExpanded },
+                        modifier = Modifier.size(28.dp),
+                    ) {
+                        Icon(
+                            imageVector = if (isCollapsed) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                            contentDescription = if (isCollapsed) tr("Expand message") else tr("Collapse message"),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
                 if (siblingCount > 1) {
                     IconButton(
                         onClick = onPrevBranch,
@@ -374,11 +409,24 @@ internal fun MessageItem(
         ScrollableMessageBody(enabled = scrollLongMessages, identity = node.id) {
             for (segment in segments) {
                 when (segment) {
-                    is ToolText.Segment.Text -> MarkdownText(
-                        markdown = segment.text,
-                        modifier = Modifier.padding(top = 8.dp),
-                        deferParse = !isLatest,
-                    )
+                    is ToolText.Segment.Text -> {
+                        val textStyle = MaterialTheme.typography.bodyMedium
+                        if (isCollapsed) {
+                            Text(
+                                text = AnnotatedString(segment.text),
+                                style = textStyle,
+                                modifier = Modifier.padding(top = 8.dp),
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        } else {
+                            MarkdownText(
+                                markdown = segment.text,
+                                modifier = Modifier.padding(top = 8.dp),
+                                deferParse = !isLatest,
+                            )
+                        }
+                    }
                     is ToolText.Segment.Calls -> ToolCallsBlock(
                         calls = segment.calls,
                         awaiting = live?.awaiting.orEmpty(),
@@ -540,7 +588,7 @@ private fun MessageHeader(
     Layout(
         content = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Avatar(painter = avatar, name = name, size = 40.dp)
+                Avatar(painter = avatar, name = name, size = 32.dp)
                 Spacer(Modifier.width(12.dp))
                 Text(
                     text = name,

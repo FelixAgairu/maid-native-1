@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2026 Felix Agairu
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the License was not distributed with this file, You can obtain one at
+ * https://mozilla.org/MPL/2.0/.
+ */
+
 package com.hatsyrei.maidnative.data.prefs
 
 import android.content.Context
@@ -6,6 +14,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -49,12 +58,19 @@ class SettingsRepository(private val context: Context) {
          * network; local servers need it turned on deliberately.
          */
         val allowCleartext: Boolean = false,
+        /** Whether to use custom CA certificates. */
+        val useCustomCertificates: Boolean = false,
         /** System certificates are always trusted; this opts API/MCP requests into user-installed CAs. */
         val trustUserCertificates: Boolean = false,
+        /** Path to custom CA certificate file. */
+        val customCertificatePath: String = "",
         val autoRenameChats: Boolean = true,
         val modelPickerTags: Boolean = false,
         val scrollLongMessages: Boolean = true,
+        val alwaysShowScrollbar: Boolean = false,
+        val collapseMessages: Boolean = false,
         val language: String = "",
+        val fontScale: Float = 1.0f,
         val model: String = "",
         val systemPrompt: String = DEFAULT_SYSTEM_PROMPT,
         /**
@@ -84,6 +100,8 @@ class SettingsRepository(private val context: Context) {
         val exportMedia: Boolean = true,
         /** ARGB accent, or 0 for the built-in blue. */
         val accentColor: Int = 0,
+        /** ARGB background color, or 0 for the default. */
+        val backgroundColor: Int = 0,
         /** Role labels shown on message cards. */
         val userName: String = DEFAULT_USER_NAME,
         val assistantName: String = DEFAULT_ASSISTANT_NAME,
@@ -135,11 +153,16 @@ class SettingsRepository(private val context: Context) {
             // already configured over HTTP predates the toggle and keeps
             // working; a fresh install sits on the HTTPS default and starts off.
             allowCleartext = prefs[KEY_ALLOW_CLEARTEXT] ?: Endpoints.isCleartext(baseURL),
+            useCustomCertificates = prefs[KEY_USE_CUSTOM_CERTIFICATES] ?: false,
             trustUserCertificates = prefs[KEY_TRUST_USER_CERTIFICATES] ?: false,
+            customCertificatePath = prefs[KEY_CUSTOM_CERT_PATH] ?: "",
             autoRenameChats = prefs[KEY_AUTO_RENAME] ?: true,
             modelPickerTags = prefs[KEY_MODEL_PICKER_TAGS] ?: false,
             scrollLongMessages = prefs[KEY_SCROLL_LONG_MESSAGES] ?: true,
+            alwaysShowScrollbar = prefs[KEY_ALWAYS_SHOW_SCROLLBAR] ?: false,
+            collapseMessages = prefs[KEY_COLLAPSE_MESSAGES] ?: false,
             language = prefs[KEY_LANGUAGE] ?: "",
+            fontScale = prefs[KEY_FONT_SCALE] ?: 1.0f,
             model = prefs[KEY_MODEL] ?: "",
             systemPrompt = prefs[KEY_SYSTEM_PROMPT] ?: DEFAULT_SYSTEM_PROMPT,
             reasoning = prefs[KEY_REASONING] ?: true,
@@ -244,8 +267,14 @@ class SettingsRepository(private val context: Context) {
     }
 
     suspend fun setModel(value: String) = edit(KEY_MODEL, value)
+    suspend fun setUseCustomCertificates(value: Boolean) {
+        context.dataStore.edit { it[KEY_USE_CUSTOM_CERTIFICATES] = value }
+    }
     suspend fun setTrustUserCertificates(value: Boolean) {
         context.dataStore.edit { it[KEY_TRUST_USER_CERTIFICATES] = value }
+    }
+    suspend fun setCustomCertificatePath(value: String) {
+        context.dataStore.edit { it[KEY_CUSTOM_CERT_PATH] = value }
     }
     suspend fun setAutoRenameChats(value: Boolean) {
         context.dataStore.edit { it[KEY_AUTO_RENAME] = value }
@@ -256,8 +285,15 @@ class SettingsRepository(private val context: Context) {
     suspend fun setScrollLongMessages(value: Boolean) {
         context.dataStore.edit { it[KEY_SCROLL_LONG_MESSAGES] = value }
     }
+    suspend fun setAlwaysShowScrollbar(value: Boolean) {
+        context.dataStore.edit { it[KEY_ALWAYS_SHOW_SCROLLBAR] = value }
+    }
+    suspend fun setCollapseMessages(value: Boolean) {
+        context.dataStore.edit { it[KEY_COLLAPSE_MESSAGES] = value }
+    }
 
     suspend fun setLanguage(value: String) { context.dataStore.edit { it[KEY_LANGUAGE] = value } }
+    suspend fun setFontScale(value: Float) { context.dataStore.edit { it[KEY_FONT_SCALE] = value } }
     suspend fun setUserName(value: String) = edit(KEY_USER_NAME, value.trim())
     suspend fun setAssistantName(value: String) = edit(KEY_ASSISTANT_NAME, value.trim())
     suspend fun setNameplate(value: String) = edit(KEY_NAMEPLATE, value)
@@ -301,6 +337,10 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setAccentColor(argb: Int) {
         context.dataStore.edit { it[KEY_ACCENT] = argb }
+    }
+
+    suspend fun setBackgroundColor(argb: Int) {
+        context.dataStore.edit { it[KEY_BACKGROUND_COLOR] = argb }
     }
 
     suspend fun setActiveChat(rootId: String?) {
@@ -529,11 +569,16 @@ class SettingsRepository(private val context: Context) {
         private val KEY_API_KEY = stringPreferencesKey("open-ai-api-key")
         private val KEY_API_KEY_ORIGIN = stringPreferencesKey("open-ai-api-key-origin")
         private val KEY_ALLOW_CLEARTEXT = booleanPreferencesKey("allow-cleartext-endpoints")
+        private val KEY_USE_CUSTOM_CERTIFICATES = booleanPreferencesKey("use-custom-certificates")
         private val KEY_TRUST_USER_CERTIFICATES = booleanPreferencesKey("trust-user-certificates")
+        private val KEY_CUSTOM_CERT_PATH = stringPreferencesKey("custom-cert-path")
         private val KEY_AUTO_RENAME = booleanPreferencesKey("auto-rename-chats")
         private val KEY_MODEL_PICKER_TAGS = booleanPreferencesKey("model-picker-tags")
         private val KEY_SCROLL_LONG_MESSAGES = booleanPreferencesKey("scroll-long-messages")
+        private val KEY_ALWAYS_SHOW_SCROLLBAR = booleanPreferencesKey("always-show-scrollbar")
+        private val KEY_COLLAPSE_MESSAGES = booleanPreferencesKey("collapse-messages")
         private val KEY_LANGUAGE = stringPreferencesKey("language")
+        private val KEY_FONT_SCALE = floatPreferencesKey("font-scale")
         private val KEY_MODEL = stringPreferencesKey("open-ai-model")
         private val KEY_SYSTEM_PROMPT = stringPreferencesKey("system-prompt")
         private val KEY_REASONING = booleanPreferencesKey("reasoning-enabled")
@@ -542,6 +587,7 @@ class SettingsRepository(private val context: Context) {
         private val KEY_ASK_TOOLS = stringSetPreferencesKey("ask-tools")
         private val KEY_EXPORT_MEDIA = booleanPreferencesKey("export-media")
         private val KEY_ACCENT = intPreferencesKey("accent-color")
+        private val KEY_BACKGROUND_COLOR = intPreferencesKey("background-color")
         private val KEY_USER_NAME = stringPreferencesKey("user-name")
         private val KEY_ASSISTANT_NAME = stringPreferencesKey("assistant-name")
         private val KEY_USER_AVATAR = longPreferencesKey("user-avatar-stamp")

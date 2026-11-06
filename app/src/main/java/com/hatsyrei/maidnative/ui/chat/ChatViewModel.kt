@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2026 Felix Agairu
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the License was not distributed with this file, You can obtain one at
+ * https://mozilla.org/MPL/2.0/.
+ */
+
 package com.hatsyrei.maidnative.ui.chat
 
 import android.app.Application
@@ -23,6 +31,7 @@ import com.hatsyrei.maidnative.domain.Attachment
 import com.hatsyrei.maidnative.domain.ConversationDefaults
 import com.hatsyrei.maidnative.domain.Modalities
 import com.hatsyrei.maidnative.domain.Sampling
+import com.hatsyrei.maidnative.domain.TokenUsageStore
 import com.hatsyrei.maidnative.domain.tools.FileTools
 import com.hatsyrei.maidnative.domain.tools.LinkedFile
 import com.hatsyrei.maidnative.domain.tools.LinkedFileStore
@@ -162,7 +171,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     // Kept apart from [state] so the theme (which sits above the whole app) is
     // not recomposed by every streamed token.
     val theme: StateFlow<ThemeSettings> = settings
-        .map { ThemeSettings(it.accentColor, it.nameplate, it.nameplateStamp) }
+        .map { ThemeSettings(it.accentColor, it.backgroundColor, it.fontScale, it.nameplate, it.nameplateStamp) }
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, ThemeSettings())
 
@@ -380,12 +389,18 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setModel(value: String) = viewModelScope.launch { settingsRepo.setModel(value) }
     fun setLanguage(value: String) = viewModelScope.launch { settingsRepo.setLanguage(value) }
+    fun setUseCustomCertificates(value: Boolean) =
+        viewModelScope.launch { settingsRepo.setUseCustomCertificates(value) }
     fun setTrustUserCertificates(value: Boolean) =
         viewModelScope.launch { settingsRepo.setTrustUserCertificates(value) }
     fun setAutoRenameChats(value: Boolean) = viewModelScope.launch { settingsRepo.setAutoRenameChats(value) }
     fun setModelPickerTags(value: Boolean) = viewModelScope.launch { settingsRepo.setModelPickerTags(value) }
     fun setScrollLongMessages(value: Boolean) = viewModelScope.launch { settingsRepo.setScrollLongMessages(value) }
+    fun setAlwaysShowScrollbar(value: Boolean) = viewModelScope.launch { settingsRepo.setAlwaysShowScrollbar(value) }
+    fun setCollapseMessages(value: Boolean) = viewModelScope.launch { settingsRepo.setCollapseMessages(value) }
     fun setReasoning(enabled: Boolean) = viewModelScope.launch { settingsRepo.setReasoning(enabled) }
+    fun reasoning(enabled: Boolean) = viewModelScope.launch { settingsRepo.setReasoning(enabled) }
+    fun autoRename(enabled: Boolean) = viewModelScope.launch { settingsRepo.setAutoRenameChats(enabled) }
     fun setSampling(value: Sampling) = viewModelScope.launch { settingsRepo.setSampling(value) }
     fun setToolPolicies(policies: Map<String, ToolPolicy>) =
         viewModelScope.launch { settingsRepo.setToolPolicies(policies) }
@@ -398,6 +413,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setExportMedia(enabled: Boolean) = viewModelScope.launch { settingsRepo.setExportMedia(enabled) }
     fun setAccentColor(argb: Int) = viewModelScope.launch { settingsRepo.setAccentColor(argb) }
+    fun setBackgroundColor(argb: Int) = viewModelScope.launch { settingsRepo.setBackgroundColor(argb) }
+    fun setFontScale(value: Float) = viewModelScope.launch { settingsRepo.setFontScale(value) }
+    fun setCustomCertificatePath(path: String) = viewModelScope.launch { settingsRepo.setCustomCertificatePath(path) }
     fun setUserName(value: String) = viewModelScope.launch { settingsRepo.setUserName(value) }
     fun setAssistantName(value: String) = viewModelScope.launch { settingsRepo.setAssistantName(value) }
     fun setNameplate(value: String) = viewModelScope.launch { settingsRepo.setNameplate(value) }
@@ -579,6 +597,25 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Delete an entire conversation (root + descendants). */
     fun deleteChat(rootId: String) = deleteSubtree(rootId)
+
+    /**
+     * Drops the retained per-request token usage from every saved assistant
+     * node, so the "saved history" summaries start from zero again. The
+     * messages themselves (text, branches, attachments) are untouched; only the
+     * usage bookkeeping is cleared, and it is persisted via the same diff save.
+     */
+    fun clearTokenUsageHistory() = viewModelScope.launch {
+        val current = _state.value.mappings
+        val cleared = current.mapValues { (_, node) ->
+            if (node.role == "assistant" && node.metadata.containsKey(TokenUsageStore.KEY)) {
+                node.copy(metadata = node.metadata.filterKeys { it != TokenUsageStore.KEY })
+            } else {
+                node
+            }
+        }
+        _state.update { it.copy(mappings = cleared) }
+        persist()
+    }
 
     /**
      * Suggested export filename for a conversation: its title + `.json`, matching

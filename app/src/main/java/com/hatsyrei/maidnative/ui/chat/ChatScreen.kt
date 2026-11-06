@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2026 Felix Agairu
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the License was not distributed with this file, You can obtain one at
+ * https://mozilla.org/MPL/2.0/.
+ */
+
 package com.hatsyrei.maidnative.ui.chat
 
 import com.hatsyrei.maidnative.ui.i18n.tr
@@ -23,6 +31,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -35,6 +44,8 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -153,6 +164,8 @@ fun ChatScreen(
                     onProperties = { id, title -> dialog = ChatDialog.Properties(id, title) },
                     onImport = { importLauncher.launch(arrayOf("application/json")) },
                     onBackupAll = { backupLauncher.launch(null) },
+                    autoRenameChats = state.settings.autoRenameChats,
+                    onAutoRenameChange = actions.autoRename,
                 )
             },
         ) {
@@ -315,7 +328,7 @@ private fun ChatScaffold(
             CenterAlignedTopAppBar(
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
-                        Icon(Icons.Filled.Menu, contentDescription = tr("Conversations"))
+                        Icon(Icons.Filled.List, contentDescription = tr("Conversations"))
                     }
                 },
                 title = {
@@ -330,16 +343,44 @@ private fun ChatScaffold(
                     }
                 },
                 actions = {
-                    IconButton(onClick = actions.openSettings) {
+                    var showMenu by remember { mutableStateOf(false) }
+                    IconButton(onClick = { showMenu = true }) {
                         Icon(
-                            Icons.Filled.Settings,
-                            contentDescription = tr("Settings"),
+                            Icons.Filled.Menu,
+                            contentDescription = tr("Menu"),
                             modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(tr("New Chat")) },
+                            onClick = {
+                                showMenu = false
+                                actions.newChat()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(tr("Endpoint")) },
+                            onClick = {
+                                showMenu = false
+                                actions.openEndpointSettings()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(tr("Settings")) },
+                            onClick = {
+                                showMenu = false
+                                actions.openSettings()
+                            }
                         )
                     }
                 },
             )
         },
+        containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Column(
             modifier = Modifier
@@ -452,6 +493,7 @@ private fun ChatScaffold(
                             userAvatar = userAvatar,
                             assistantAvatar = assistantAvatar,
                             scrollLongMessages = state.settings.scrollLongMessages,
+                            collapseMessages = state.settings.collapseMessages,
                             onRegenerate = { actions.regenerate(node.id) },
                             onDelete = { onDialog(ChatDialog.DeleteMessage(node.id)) },
                             onRequestEdit = { revise ->
@@ -473,6 +515,7 @@ private fun ChatScaffold(
                             onNextBranch = { node.parent?.let(actions.nextBranch) },
                             streamingState = streamingMarkdown.takeIf { node.id == streamingId },
                             streaming = streaming.takeIf { node.id == streamingId },
+                            accentColor = state.settings.accentColor,
                         )
                     }
                     if (conversation.isNotEmpty()) {
@@ -481,11 +524,13 @@ private fun ChatScaffold(
                         }
                     }
                 }
-                DraggableScrollbar(
+                EnhancedNavigationScrollbar(
                     listState = listState,
                     modifier = Modifier.align(Alignment.TopEnd),
+                    messages = conversation,
                     trailingSpacerHeight = spacerHeight,
                     resetKey = state.root,
+                    alwaysShowScrollbar = state.settings.alwaysShowScrollbar,
                 )
             }
             state.error?.let { err ->
@@ -517,6 +562,9 @@ private fun ChatScaffold(
                         state.contextWindows[state.settings.model], draft,
                         state.pendingAttachments.isNotEmpty() || state.pendingFiles.isNotEmpty(), state.systemPrompt, compact)
                 },
+                showReasoningToggle = true,
+                reasoningEnabled = state.settings.reasoning,
+                onReasoningChange = actions.reasoning,
             )
         }
     }

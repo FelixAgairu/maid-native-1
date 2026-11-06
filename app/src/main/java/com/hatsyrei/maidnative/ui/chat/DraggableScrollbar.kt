@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2026 Felix Agairu
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the License was not distributed with this file, You can obtain one at
+ * https://mozilla.org/MPL/2.0/.
+ */
+
 package com.hatsyrei.maidnative.ui.chat
 
 import androidx.compose.animation.core.Animatable
@@ -29,6 +37,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Surface
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -45,7 +58,7 @@ private val THUMB_HEIGHT = 48.dp
 private val HIT_WIDTH = 22.dp
 private val ITEM_SPACING = 12.dp
 
-private class ThumbMetrics(
+internal class ThumbMetrics(
     val visible: Boolean,
     val thumbTopPx: Float,
     val thumbTravelPx: Float,
@@ -62,7 +75,7 @@ private val HIDDEN = ThumbMetrics(false, 0f, 0f, 0f)
  * i.e. once per frame while scrolling and once per streamed token while
  * generating.
  */
-private class ItemSizeCache {
+internal class ItemSizeCache {
     // Index-addressed and unboxed: this is read for every item above the
     // viewport on each frame, which a HashMap<Int, Int> boxed per lookup.
     private var sizes = IntArray(16) { UNKNOWN_SIZE }
@@ -117,7 +130,7 @@ private const val UNKNOWN_SIZE = -1
 // trailing bottom spacer (viewport - 96dp, added by ChatScaffold so the last
 // message can scroll up) is a real list item and is seeded here so it is
 // accounted for before it is ever measured.
-private fun computeMetrics(
+internal fun computeMetrics(
     state: LazyListState,
     thumbHeightPx: Float,
     spacingPx: Float,
@@ -180,6 +193,7 @@ fun DraggableScrollbar(
     modifier: Modifier = Modifier,
     trailingSpacerHeight: Dp = 0.dp,
     resetKey: Any? = null,
+    alwaysShowScrollbar: Boolean = false,
 ) {
     val density = LocalDensity.current
     val thumbHeightPx = with(density) { THUMB_HEIGHT.toPx() }
@@ -196,7 +210,9 @@ fun DraggableScrollbar(
     // changes on every scrolled pixel and is instead read in the layout phase
     // (`offset {}`) and lazily by the drag handler, so scrolling no longer
     // recomposes this subtree at all.
-    val visible by remember(metrics) { derivedStateOf { metrics.value.visible } }
+    val visible by remember(metrics, alwaysShowScrollbar) {
+        derivedStateOf { alwaysShowScrollbar || metrics.value.visible }
+    }
 
     val opacity = remember { Animatable(0f) }
     var dragging by remember { mutableStateOf(false) }

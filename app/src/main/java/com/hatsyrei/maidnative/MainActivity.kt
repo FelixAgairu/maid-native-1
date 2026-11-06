@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2026 Felix Agairu
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the License was not distributed with this file, You can obtain one at
+ * https://mozilla.org/MPL/2.0/.
+ */
+
 package com.hatsyrei.maidnative
 
 import android.content.ComponentCallbacks2
@@ -21,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hatsyrei.maidnative.ui.chat.ChatActions
 import com.hatsyrei.maidnative.ui.chat.ChatScreen
@@ -76,10 +85,11 @@ private fun MaidNativeApp(viewModel: ChatViewModel) {
     // Handed down unread, so only the streaming bubble observes each token.
     val streaming = viewModel.streaming.collectAsStateWithLifecycle()
     var screen by rememberSaveable { mutableStateOf(Screen.Chat) }
+    val context = LocalContext.current
 
     // Remembered once: the point of the holders is that the screens below see a
     // stable instance rather than fresh method references every recomposition.
-    val chatActions = remember(viewModel) {
+    val chatActions = remember(viewModel, context) {
         ChatActions(
             submit = viewModel::submit,
             stop = viewModel::stop,
@@ -92,6 +102,10 @@ private fun MaidNativeApp(viewModel: ChatViewModel) {
             readFile = viewModel::readFile,
             newChat = viewModel::newChat,
             openSettings = { screen = Screen.Settings },
+            openEndpointSettings = {
+                val intent = android.content.Intent(context, EndpointSettingsActivity::class.java)
+                context.startActivity(intent)
+            },
             regenerate = viewModel::regenerate,
             deleteMessage = viewModel::deleteMessage,
             edit = viewModel::editMessage,
@@ -104,6 +118,8 @@ private fun MaidNativeApp(viewModel: ChatViewModel) {
             setSystemPrompt = viewModel::setSystemPrompt,
             selectModel = viewModel::setModel,
             setModelPickerTags = viewModel::setModelPickerTags,
+            reasoning = viewModel::reasoning,
+            autoRename = viewModel::autoRename,
             exportFileName = viewModel::exportFileName,
             exportConversation = viewModel::exportConversation,
             importConversations = viewModel::importConversations,
@@ -117,10 +133,13 @@ private fun MaidNativeApp(viewModel: ChatViewModel) {
             setBaseURL = viewModel::setBaseURL,
             setApiKey = viewModel::setApiKey,
             setAllowCleartext = viewModel::setAllowCleartext,
+            setUseCustomCertificates = viewModel::setUseCustomCertificates,
             setTrustUserCertificates = viewModel::setTrustUserCertificates,
             setAutoRenameChats = viewModel::setAutoRenameChats,
             setModelPickerTags = viewModel::setModelPickerTags,
             setScrollLongMessages = viewModel::setScrollLongMessages,
+            setAlwaysShowScrollbar = viewModel::setAlwaysShowScrollbar,
+            setCollapseMessages = viewModel::setCollapseMessages,
             setModel = viewModel::setModel,
             refreshModels = viewModel::refreshModels,
             setReasoning = viewModel::setReasoning,
@@ -135,6 +154,7 @@ private fun MaidNativeApp(viewModel: ChatViewModel) {
             renamePreset = viewModel::renamePreset,
             deletePreset = viewModel::deletePreset,
             setAccentColor = viewModel::setAccentColor,
+            setBackgroundColor = viewModel::setBackgroundColor,
             setNameplate = viewModel::setNameplate,
             importNameplate = viewModel::importNameplate,
             setUserName = viewModel::setUserName,
@@ -142,6 +162,9 @@ private fun MaidNativeApp(viewModel: ChatViewModel) {
             importAvatar = viewModel::importAvatar,
             removeAvatar = viewModel::removeAvatar,
             setExportMedia = viewModel::setExportMedia,
+            setFontScale = viewModel::setFontScale,
+            clearTokenUsageHistory = viewModel::clearTokenUsageHistory,
+            setCustomCertificatePath = viewModel::setCustomCertificatePath,
         )
     }
 

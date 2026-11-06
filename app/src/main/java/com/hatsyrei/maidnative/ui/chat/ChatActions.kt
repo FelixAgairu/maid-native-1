@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2026 Felix Agairu
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the License was not distributed with this file, You can obtain one at
+ * https://mozilla.org/MPL/2.0/.
+ */
+
 package com.hatsyrei.maidnative.ui.chat
 
 import android.net.Uri
@@ -27,6 +35,7 @@ class ChatActions(
     val readFile: suspend (LinkedFile) -> String?,
     val newChat: () -> Unit,
     val openSettings: () -> Unit,
+    val openEndpointSettings: () -> Unit,
     val regenerate: (String) -> Unit,
     val deleteMessage: (String) -> Unit,
     val edit: (String, String, List<Attachment>, ToolCalls?) -> Unit,
@@ -39,6 +48,8 @@ class ChatActions(
     val setSystemPrompt: (String) -> Unit,
     val selectModel: (String) -> Unit,
     val setModelPickerTags: (Boolean) -> Unit,
+    val reasoning: (Boolean) -> Unit,
+    val autoRename: (Boolean) -> Unit,
     val exportFileName: (String) -> String,
     val exportConversation: (String, Uri) -> Unit,
     val importConversations: (List<Uri>) -> Unit,

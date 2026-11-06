@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2026 Felix Agairu
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the License was not distributed with this file, You can obtain one at
+ * https://mozilla.org/MPL/2.0/.
+ */
+
 package com.hatsyrei.maidnative.ui.settings
 
 import com.hatsyrei.maidnative.ui.i18n.tr
@@ -5,8 +13,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,6 +69,60 @@ private val AccentPresets = listOf(
     Color(0xFF9FA8DA), // indigo
     Color(0xFFB0BEC5), // blue grey
 )
+
+/** Light background presets. */
+private val BackgroundPresets = listOf(
+    Color(0xFFFFFFFF), // pure white
+    Color(0xFFF5F5F5), // light grey
+    Color(0xFFFAFAFA), // off-white
+    Color(0xFFF8F9FA), // cool white
+    Color(0xFFFFF8E1), // warm cream
+)
+
+/**
+ * Background color picker with light presets.
+ */
+@Composable
+internal fun BackgroundPicker(
+    selected: Int,
+    onSelect: (Int) -> Unit,
+) {
+    var picking by remember { mutableStateOf(false) }
+    val current = if (selected == 0) BackgroundPresets.first() else Color(selected)
+    val custom = BackgroundPresets.none { it.toArgb() == selected }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        BackgroundPresets.forEach { preset ->
+            Swatch(
+                color = preset,
+                selected = !custom && preset.toArgb() == selected,
+                onClick = { onSelect(preset.toArgb()) },
+            )
+        }
+        Swatch(
+            color = if (custom) current else Color.Transparent,
+            selected = custom,
+            onClick = { picking = true },
+            rainbow = !custom,
+        )
+    }
+
+    if (picking) {
+        ColorPickerDialog(
+            initial = current,
+            onDismiss = { picking = false },
+            onConfirm = {
+                onSelect(it.toArgb())
+                picking = false
+            },
+        )
+    }
+}
 
 /**
  * Preset swatches plus a custom entry. [selected] is 0 for the built-in accent,
@@ -118,6 +182,7 @@ private fun Swatch(
         modifier = Modifier
             .size(40.dp)
             .clip(CircleShape)
+            .clickable(onClick = onClick)
             .then(
                 if (rainbow) {
                     Modifier.background(Brush.sweepGradient(HueWheel))
@@ -129,8 +194,7 @@ private fun Swatch(
                 width = if (selected) 3.dp else 1.dp,
                 color = if (selected) MaterialTheme.colorScheme.onSurface else outline,
                 shape = CircleShape,
-            )
-            .clickable(onClick = onClick),
+            ),
         contentAlignment = Alignment.Center,
     ) {
         if (selected) {
@@ -160,7 +224,7 @@ private fun ColorPickerDialog(
 
     AppDialog(
         onDismissRequest = onDismiss,
-        title = { Text(tr("Accent colour")) },
+        title = { Text(tr("Background colour")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Box(

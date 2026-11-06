@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2026 Felix Agairu
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the License was not distributed with this file, You can obtain one at
+ * https://mozilla.org/MPL/2.0/.
+ */
+
 package com.hatsyrei.maidnative.ui.chat
 
 import com.hatsyrei.maidnative.ui.i18n.tr
@@ -7,6 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitHorizontalTouchSlopOrCancellation
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -20,11 +29,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,7 +44,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -142,7 +155,29 @@ internal fun DrawerContent(
     onProperties: (String, String) -> Unit,
     onImport: () -> Unit,
     onBackupAll: () -> Unit,
+    autoRenameChats: Boolean = true,
+    onAutoRenameChange: ((Boolean) -> Unit)? = null,
 ) {
+    // Batch selection state
+    var selecting by remember { mutableStateOf(false) }
+    var selectedIds by remember { mutableStateOf(setOf<String>()) }
+
+    fun toggleSelect(id: String) {
+        selectedIds = if (selectedIds.contains(id)) {
+            selectedIds - id
+        } else {
+            selectedIds + id
+        }
+    }
+
+    fun selectAll() {
+        selectedIds = roots.map { it.id }.toSet()
+    }
+
+    fun deselectAll() {
+        selectedIds = emptySet()
+    }
+
     ModalDrawerSheet(
         modifier = Modifier
             .fillMaxWidth(0.85f)
@@ -157,17 +192,105 @@ internal fun DrawerContent(
                         .padding(start = 24.dp, end = 8.dp, top = 12.dp, bottom = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = tr("Chats"),
-                        style = MaterialTheme.typography.titleLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                    DrawerActionChip(tr("New chat"), AddIcon, onClick = onNewChat)
-                    DrawerOverflowMenu(onImport = onImport, onBackupAll = onBackupAll)
+                    if (selecting) {
+                        // Selection mode header
+                        Text(
+                            text = if (selectedIds.isEmpty()) tr("Select chats") else "${selectedIds.size} ${tr("selected")}",
+                            style = MaterialTheme.typography.titleLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        // Select all / deselect all
+                        TextButton(
+                            onClick = { if (selectedIds.size == roots.size) deselectAll() else selectAll() },
+                            enabled = roots.isNotEmpty(),
+                        ) {
+                            Text(
+                                if (selectedIds.size == roots.size) tr("Deselect all") else tr("Select all"),
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
+                        // Done button
+                        IconButton(onClick = { selecting = false; deselectAll() }) {
+                            Icon(Icons.Filled.Check, contentDescription = tr("Done"))
+                        }
+                    } else {
+                        // Normal header
+                        Text(
+                            text = tr("Chats"),
+                            style = MaterialTheme.typography.titleLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        // Select mode toggle
+                        TextButton(onClick = { selecting = true }) {
+                            Text(tr("Select"), style = MaterialTheme.typography.labelLarge)
+                        }
+                        DrawerActionChip(tr("New chat"), AddIcon, onClick = onNewChat)
+                        DrawerOverflowMenu(onImport = onImport, onBackupAll = onBackupAll)
+                    }
                 }
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp))
+
+                // Batch action bar (shown when items are selected)
+                if (selecting && selectedIds.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        AssistChip(
+                            onClick = {
+                                selectedIds.forEach { id -> onExport(id) }
+                                deselectAll()
+                                selecting = false
+                            },
+                            label = { Text(tr("Export")) },
+                            leadingIcon = {
+                                Icon(FileDownloadIcon, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize))
+                            },
+                            shape = RoundedCornerShape(percent = 50),
+                        )
+                        AssistChip(
+                            onClick = {
+                                selectedIds.forEach { id -> onDeleteChat(id) }
+                                deselectAll()
+                                selecting = false
+                            },
+                            label = { Text(tr("Delete")) },
+                            leadingIcon = {
+                                Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize))
+                            },
+                            shape = RoundedCornerShape(percent = 50),
+                        )
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp))
+                }
+
+                if (!selecting && onAutoRenameChange != null) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = tr("Automatically name new chats"),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Switch(
+                            checked = autoRenameChats,
+                            onCheckedChange = onAutoRenameChange,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp))
+                }
+
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(bottom = LIST_BOTTOM_INSET),
@@ -188,11 +311,22 @@ internal fun DrawerContent(
                             id = root.id,
                             title = title,
                             selected = root.id == activeRoot,
-                            onClick = { onSelect(root.id) },
+                            selecting = selecting,
+                            isSelectedForBatch = selectedIds.contains(root.id),
+                            onToggleSelect = { toggleSelect(root.id) },
+                            onClick = {
+                                if (selecting) {
+                                    toggleSelect(root.id)
+                                } else {
+                                    onSelect(root.id)
+                                }
+                            },
                             onRename = { onRename(root.id, title) },
                             onDelete = { onDeleteChat(root.id) },
                             onExport = { onExport(root.id) },
                             onProperties = { onProperties(root.id, title) },
+                            autoRenameChats = autoRenameChats,
+                            onAutoRenameChange = onAutoRenameChange,
                         )
                     }
                 }
@@ -289,16 +423,23 @@ private fun DrawerChatItem(
     id: String,
     title: String,
     selected: Boolean,
+    selecting: Boolean,
+    isSelectedForBatch: Boolean,
+    onToggleSelect: () -> Unit,
     onClick: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
     onExport: () -> Unit,
     onProperties: () -> Unit,
+    autoRenameChats: Boolean = true,
+    onAutoRenameChange: ((Boolean) -> Unit)? = null,
 ) {
     val menu = rememberTapMenu(remember(id) { "chat:$id" })
     // Fade the pill between focused and unfocused states (RN parity).
     val pillColor by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent,
+        targetValue = if (selecting && isSelectedForBatch) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+            else if (selected) MaterialTheme.colorScheme.surfaceVariant
+            else Color.Transparent,
         animationSpec = tween(450),
         label = "chatPillBg",
     )
@@ -313,18 +454,27 @@ private fun DrawerChatItem(
             color = pillColor,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Box(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .tapMenuGestures(menu, onTap = onClick)
-                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
+                if (selecting) {
+                    Checkbox(
+                        checked = isSelectedForBatch,
+                        onCheckedChange = { onToggleSelect() },
+                        modifier = Modifier.padding(end = 8.dp),
+                    )
+                }
                 Text(
                     text = if (title == ConversationDefaults.CHAT_TITLE) tr("New chat") else title,
                     maxLines = 1,
                     style = MaterialTheme.typography.labelLarge,
                     // Dim just the label while pressed as the long-press cue.
                     color = if (menu.pressed) pillTextColor.copy(alpha = 0.5f) else pillTextColor,
+                    modifier = Modifier.weight(1f),
                 )
             }
         }

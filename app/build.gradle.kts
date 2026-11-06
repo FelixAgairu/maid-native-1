@@ -1,7 +1,42 @@
+import java.io.File
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+}
+
+// Read version from temporary file created by bumpAndBuildRelease task
+// Fall back to version.properties if temp file doesn't exist
+val versionTempFile = File(projectDir, ".version_temp")
+val versionNameProp = if (versionTempFile.exists()) {
+    val content = versionTempFile.readText()
+    val parts = content.split("|")
+    parts.getOrNull(0) ?: "1.9.0"
+} else {
+    val props = Properties()
+    val versionFile = File(projectDir.parentFile, "version.properties")
+    if (versionFile.exists()) {
+        versionFile.inputStream().use { props.load(it) }
+        props.getProperty("versionName", "1.9.0")
+    } else {
+        "1.9.0"
+    }
+}
+val versionCodeProp = if (versionTempFile.exists()) {
+    val content = versionTempFile.readText()
+    val parts = content.split("|")
+    parts.getOrNull(1)?.toInt() ?: 0
+} else {
+    val props = Properties()
+    val versionFile = File(projectDir.parentFile, "version.properties")
+    if (versionFile.exists()) {
+        versionFile.inputStream().use { props.load(it) }
+        props.getProperty("versionCode")?.toInt() ?: 0
+    } else {
+        0
+    }
 }
 
 android {
@@ -15,8 +50,37 @@ android {
         applicationId = "com.hatsyrei.maidnative"
         minSdk = 26
         targetSdk = 36
-        versionCode = 23
-        versionName = "1.9.0"
+        
+        // Read version from temporary file created by bumpAndBuildRelease task
+        val versionTempFile = File(projectDir, ".version_temp")
+        versionCode = if (versionTempFile.exists()) {
+            val content = versionTempFile.readText()
+            val parts = content.split("|")
+            parts.getOrNull(1)?.toInt() ?: 0
+        } else {
+            val props = Properties()
+            val versionFile = File(projectDir.parentFile, "version.properties")
+            if (versionFile.exists()) {
+                versionFile.inputStream().use { props.load(it) }
+                props.getProperty("versionCode")?.toInt() ?: 0
+            } else {
+                0
+            }
+        }
+        versionName = if (versionTempFile.exists()) {
+            val content = versionTempFile.readText()
+            val parts = content.split("|")
+            parts.getOrNull(0) ?: "1.9.0"
+        } else {
+            val props = Properties()
+            val versionFile = File(projectDir.parentFile, "version.properties")
+            if (versionFile.exists()) {
+                versionFile.inputStream().use { props.load(it) }
+                props.getProperty("versionName", "1.9.0")
+            } else {
+                "1.9.0"
+            }
+        }
 
         // androidx.graphics and DataStore ship small native libs; only arm64 devices are targeted.
         ndk {
@@ -24,12 +88,19 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("maid-release-key.jks")
+            storePassword = "maidrelease"
+            keyAlias = "maid"
+            keyPassword = "maidrelease"
+        }
+    }
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            // Use the auto-generated debug signing key for release builds.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -104,4 +175,100 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     testImplementation(libs.junit)
     testImplementation(libs.org.json)
+}
+
+// Task to bump version and build release APK
+val bumpAndBuildRelease = tasks.register("bumpAndBuildRelease") {
+    notCompatibleWithConfigurationCache("Reads and writes version.properties")
+    doFirst {
+        val versionFile = File(projectDir.parentFile, "version.properties")
+        
+        // Read current version from version.properties
+        val props = Properties()
+        if (versionFile.exists()) {
+            val inputStream = versionFile.inputStream()
+            try {
+                props.load(inputStream)
+            } finally {
+                inputStream.close()
+            }
+        }
+        
+        var currentVersion = props.getProperty("versionName", "1.9.0")
+        println("Current version: $currentVersion")
+        
+        // Parse version components
+        val parts = currentVersion.split(".")
+        if (parts.size != 3) {
+            throw RuntimeException("Version must be in format X.Y.Z, got: $currentVersion")
+        }
+        
+        val major = parts[0].toInt()
+        val minor = parts[1].toInt()
+        val patch = parts[2].toInt()
+        
+        // Bump patch version
+        val newPatch = patch + 1
+        val newVersion = "$major.$minor.$newPatch"
+        println("Bumping to version: $newVersion")
+        
+        // Use Unix timestamp (seconds) as versionCode
+        val timestamp = (System.currentTimeMillis() / 1000).toInt()
+        println("Setting versionCode to timestamp: $timestamp")
+        
+        // Update version.properties
+        props.setProperty("versionName", newVersion)
+        props.setProperty("versionCode", timestamp.toString())
+        val os = versionFile.outputStream()
+        try {
+            props.store(os, null)
+        } finally {
+            os.close()
+        }
+        println("Updated version.properties")
+        
+        // Write version to a temporary file for the build to read
+        val versionTempFile = File(projectDir, ".version_temp")
+        versionTempFile.writeText("$newVersion|$timestamp")
+        println("Wrote version to temp file: $newVersion|$timestamp")
+    }
+}
+
+// Make assembleRelease depend on bumpAndBuildRelease
+afterEvaluate {
+    tasks.named("assembleRelease") {
+        dependsOn(bumpAndBuildRelease)
+    }
+    
+    // Also make the android block depend on bumpAndBuildRelease
+    tasks.named("processReleaseManifest") {
+        dependsOn(bumpAndBuildRelease)
+    }
+    
+    // Task to rename APK file with version information
+    tasks.register("renameApk") {
+        doLast {
+            val versionTempFile = File(projectDir, ".version_temp")
+            val versionInfo = if (versionTempFile.exists()) {
+                val content = versionTempFile.readText()
+                val parts = content.split("|")
+                parts.getOrNull(0) ?: "1.9.0"
+            } else {
+                "1.9.0"
+            }
+            
+            val apkFile = File(projectDir, "build/outputs/apk/release/app-release.apk")
+            if (apkFile.exists()) {
+                val newName = "MaidNative-$versionInfo.apk"
+                val newApkFile = File(apkFile.parentFile, newName)
+                apkFile.renameTo(newApkFile)
+                println("Renamed APK from ${apkFile.name} to $newName")
+            }
+        }
+    }
+    
+    // Make assembleRelease depend on renameApk
+    tasks.named("assembleRelease") {
+        finalizedBy("renameApk")
+    }
 }

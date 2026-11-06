@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2026 Felix Agairu
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the License was not distributed with this file, You can obtain one at
+ * https://mozilla.org/MPL/2.0/.
+ */
+
 package com.hatsyrei.maidnative.ui.icons
 
 import androidx.compose.ui.graphics.Color
@@ -221,6 +229,10 @@ val DnsIcon: ImageVector by lazy {
             "M20,3H4c-0.55,0 -1,0.45 -1,1v6c0,0.55 0.45,1 1,1h16c0.55,0 1,-0.45 1,-1V4c0,-0.55 -0.45,-1 -1,-1z" +
             "M7,9c-1.1,0 -2,-0.9 -2,-2s0.9,-2 2,-2 2,0.9 2,2 -0.9,2 -2,2z",
     )
+}
+
+val MenuIcon: ImageVector by lazy {
+    materialIcon("Menu", "M3,18h18v-2H3v2zM3,6v2h18V6H3zM3,13v2h18v-2H3z")
 }
 
 private fun materialIcon(name: String, pathData: String): ImageVector =

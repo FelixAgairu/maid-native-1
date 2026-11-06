@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2026 Felix Agairu
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the License was not distributed with this file, You can obtain one at
+ * https://mozilla.org/MPL/2.0/.
+ */
+
 package com.hatsyrei.maidnative.ui.chat
 
 import com.hatsyrei.maidnative.ui.i18n.tr
@@ -42,16 +50,16 @@ internal fun ChatPropertiesDialog(
         title = { Text(title, maxLines = 2) },
         text = {
             Column {
+                // Token usage - most important info first
                 Text(tr("Token usage · active branch"), style = MaterialTheme.typography.titleSmall)
+                StatRow(tr("Total tokens"), usage.total?.formatted() ?: UNKNOWN)
                 StatRow(tr("Input tokens"), usage.input?.formatted() ?: UNKNOWN)
                 StatRow(tr("Output tokens"), usage.output?.formatted() ?: UNKNOWN)
-                StatRow(if (usage.partial) tr("Known total (partial)") else tr("Total tokens"), usage.total?.formatted() ?: UNKNOWN)
                 StatRow(tr("Complete usage records"), "${usage.completeRequests} / ${usage.requests}")
-                Text(tr("All retained branches"), style = MaterialTheme.typography.titleSmall,
+                
+                // Conversation stats
+                Text(tr("Conversation stats"), style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(top = 16.dp))
-                Text(formatUsage(allBranchesUsage), style = MaterialTheme.typography.bodySmall)
-                Note(tr("Usage sums API requests, including tool continuations and repeated input history. Missing or interrupted records remain partial. Deleted replies are excluded; this is not a billing ledger."))
-                if (allBranchesUsage.legacyTurns > 0) Note(tr("Older tool replies may only include the final request's usage."))
                 StatRow(
                     tr("Conversation size"),
                     stats.conversationTokens.tokens(stats.sizeAccuracy),
@@ -59,15 +67,24 @@ internal fun ChatPropertiesDialog(
                 StatRow(tr("Average speed"), stats.tokensPerSecond.tokensPerSecond())
                 StatRow(tr("Average response"), stats.averageResponseMs.duration())
                 StatRow(tr("Time to first token"), stats.averageTtftMs.duration())
-                val notes = stats.notes()
-                if (notes.isNotEmpty()) {
-                    Column(
-                        modifier = Modifier.padding(top = 24.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        notes.forEach { Note(it) }
-                    }
+                
+                // All branches usage
+                Text(tr("All retained branches"), style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(top = 16.dp))
+                Text(formatUsage(allBranchesUsage), style = MaterialTheme.typography.bodySmall)
+                
+                // Notes and explanations
+                Column(
+                    modifier = Modifier.padding(top = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Note(tr("Usage sums API requests, including tool continuations and repeated input history. Missing or interrupted records remain partial. Deleted replies are excluded; this is not a billing ledger."))
+                    if (allBranchesUsage.legacyTurns > 0) Note(tr("Older tool replies may only include the final request's usage."))
+                    val notes = stats.notes()
+                    notes.forEach { Note(it) }
                 }
+                
+                // Linked files at the bottom
                 if (files.isNotEmpty()) {
                     Text(
                         text = tr("Linked files"),

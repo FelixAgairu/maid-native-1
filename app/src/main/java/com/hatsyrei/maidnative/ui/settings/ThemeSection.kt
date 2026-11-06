@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2026 Felix Agairu
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the License was not distributed with this file, You can obtain one at
+ * https://mozilla.org/MPL/2.0/.
+ */
+
 package com.hatsyrei.maidnative.ui.settings
 
 import com.hatsyrei.maidnative.ui.i18n.tr
@@ -13,6 +21,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,6 +34,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,10 +47,12 @@ import com.hatsyrei.maidnative.R
 import com.hatsyrei.maidnative.data.prefs.SettingsRepository
 import com.hatsyrei.maidnative.ui.theme.LocalNameplate
 
-/** Accent colour + composer pill artwork. */
+/** Accent colour + composer pill artwork + background color + font scale. */
 @Composable
 internal fun ThemeSection(
     accentColor: Int,
+    backgroundColor: Int,
+    fontScale: Float,
     nameplate: String,
     actions: SettingsActions,
 ) {
@@ -52,6 +64,27 @@ internal fun ThemeSection(
 
     Label(tr("Accent"))
     AccentPicker(selected = accentColor, onSelect = actions.setAccentColor)
+
+    Label(tr("Background"))
+    BackgroundPicker(selected = backgroundColor, onSelect = actions.setBackgroundColor)
+
+    Label(tr("In-app UI scale"))
+    Text("${(fontScale * 100).toInt()}%")
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        listOf(0.8f, 0.9f, 1.0f, 1.1f, 1.2f).forEach { scale ->
+            TextButton(
+                onClick = { actions.setFontScale(scale) },
+                modifier = Modifier.padding(vertical = 4.dp),
+            ) {
+                Text("${(scale * 100).toInt()}%")
+            }
+        }
+    }
 
     Label(tr("Composer background"))
     Row(

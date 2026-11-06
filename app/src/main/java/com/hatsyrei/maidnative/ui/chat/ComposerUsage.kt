@@ -1,9 +1,18 @@
+/*
+ * Copyright (C) 2026 Felix Agairu
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the License was not distributed with this file, You can obtain one at
+ * https://mozilla.org/MPL/2.0/.
+ */
+
 package com.hatsyrei.maidnative.ui.chat
 
 import com.hatsyrei.maidnative.ui.i18n.tr
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -23,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -95,20 +105,40 @@ internal fun ComposerUsage(
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
         ) {
             if (compact) {
-                Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text(contextLabel, style = MaterialTheme.typography.labelSmall)
-                    Text(tr("Chat · {0} tokens{1}", total, status), style = MaterialTheme.typography.labelSmall)
-                    Text(tr("In {0} · Out {1}", input, output), style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Text(contextLabel, style = MaterialTheme.typography.labelSmall)
+                        Text(tr("Chat · {0} tokens{1}", total, status), style = MaterialTheme.typography.labelSmall)
+                        Text(tr("In {0} · Out {1}", input, output), style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (contextWindow != null) {
+                        val progress = (context.tokens.toFloat() / contextWindow).coerceIn(0f, 1f)
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(contextLabel, style = MaterialTheme.typography.labelSmall)
-                    if (contextWindow != null) LinearProgressIndicator(
-                        progress = { (context.tokens.toFloat() / contextWindow).coerceIn(0f, 1f) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    if (contextWindow != null) {
+                        val progress = (context.tokens.toFloat() / contextWindow).coerceIn(0f, 1f)
+                        // Show dual progress: current usage in accent color, total in surface color
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            LinearProgressIndicator(
+                                progress = { progress },
+                                modifier = Modifier.weight(1f),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            Text(tr("{0}%" , (progress * 100).toInt()),
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(start = 4.dp))
+                        }
+                    }
                     FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(tr("Chat · {0} tokens{1}" , total, status), style = MaterialTheme.typography.labelSmall)
                         Text(tr("In {0} · Out {1}" , input, output), style = MaterialTheme.typography.labelSmall,

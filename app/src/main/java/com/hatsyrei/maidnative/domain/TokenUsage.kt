@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2026 Felix Agairu
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the License was not distributed with this file, You can obtain one at
+ * https://mozilla.org/MPL/2.0/.
+ */
+
 package com.hatsyrei.maidnative.domain
 
 import com.hatsyrei.maidnative.domain.tree.MessageNode
@@ -28,7 +36,7 @@ class UsageLedger {
 }
 
 object TokenUsageStore {
-    private const val KEY = "requestUsage"
+    const val KEY = "requestUsage"
     fun write(requests: List<RequestUsage>, metadata: Map<String, Any?>): Map<String, Any?> =
         metadata + (KEY to JSONArray(requests.map {
             JSONObject().put("input", it.input).put("output", it.output).put("finished", it.finished)
